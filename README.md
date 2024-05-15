@@ -78,6 +78,11 @@ The application will use its own database, but will also incorporate Google Maps
 
 <!-- ![ReportsPage](./planning/ReportsPage.png) -->
 
+### Event Form
+
+<!-- ![EventForm](./planning/EventForm.png) -->
+
+
 
 ## User Stories
 
