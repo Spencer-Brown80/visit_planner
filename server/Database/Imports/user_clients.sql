@@ -1,2 +1,9 @@
 INSERT INTO user_clients (first_name, last_name, address_line_1, address_line_2, city, state, zip, phone, email, geolocation, geolocation_distance, address_notes, is_notified, notify_contact, notification_period) VALUES
-('Jane', 'Smith', '456 Elm St', 'Apt 2', 'Othertown', 'TX', '67890', '555-5678', 'jane.smith@example.com', 'Somewhere', 10, 'Front door is blue', true, true, 30);
+('Janet', 'Sanderson', '12345 Big Ridge Rd', NULL, 'Hixson', 'TN', '37343', '555-5678', 'janet.sanderson@example.com', '35.1733,-85.2168', 10, 'Front door is blue', false, false, 30),
+('Esther', 'Chase', '6789 Middle Valley Rd', 'Apt 2', 'Hixson', 'TN', '37343', '555-5679', 'esther.chase@example.com', '35.1897,-85.2131', 10, 'Front door is red', false, false, 30),
+('Helen', 'Donaldson', '1011 Daisy Dallas Rd', NULL, 'Soddy-Daisy', 'TN', '37379', '555-5680', 'helend@example.com', '35.2561,-85.1757', 10, 'Front door is orange', false, false, 30),
+('Dan', 'Franklin', '1415 Dayton Pike', 'Apt 114', 'Soddy-Daisy', 'TN', '37379', '555-5681', 'dfranklin@example.com', '35.2462,-85.1745', 10, 'Front door is yellow', false, false, 30),
+('Hector', 'Ramirez', '1617 Grubb Rd', NULL, 'Ooltewah', 'TN', '37363', '555-5682', 'hramirez@example.com', '35.0896,-85.0629', 10, 'Front door is green', false, false, 30),
+('Lucille', 'Davis', '1819 Snow Hill Rd', 'Unit 210', 'Ooltewah', 'TN', '37363', '555-5683', 'lucille_davis@example.com', '35.1296,-85.0643', 10, 'Front door is purple', false, false, 30),
+('Mark', 'Smith', '200 Market St', NULL, 'Chattanooga', 'TN', '37402', '555-5690', 'mark.smith@example.com', '35.0527,-85.3136', 10, 'Front door is white', false, false, 30),
+('Linda', 'Johnson', '123 Walnut St', 'Apt 305', 'Chattanooga', 'TN', '37403', '555-5691', 'linda.johnson@example.com', '35.0567,-85.3078', 10, 'Front door is brown', false, false, 30);

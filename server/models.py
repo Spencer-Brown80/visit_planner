@@ -31,35 +31,33 @@ class User(db.Model, SerializerMixin):
     username = db.Column(db.String, nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
 
-    # relationships with events
+    # Relationships
     events = db.relationship("Event", back_populates="user")
-    
-    # One-to-many relationship with User_Notification
-    notifications = relationship("User_Notification", back_populates="user")
-    
+    notifications = db.relationship("User_Notification", back_populates="user")
+    parameters = db.relationship("User_Parameters", back_populates="user")
+    temp_params = db.relationship("User_Temp_Params", back_populates="user")
+    notes = db.relationship("User_Notes", back_populates="user")
+    reports = db.relationship("User_Reports", back_populates="user")
 
-    # association proxies
+    # Association proxies
     user_clients = association_proxy("events", "user_client")
-    
 
-    # serialization rules
+    # Serialization rules
     serialize_rules = ("-events", )
 
-    # validates that the password isn't empty
+    # Validations
     @validates("first_name", "last_name", "address", "city", "state", "zip", "password")
-    def validate_password_not_empty(self, key, value):
+    def validate_not_empty(self, key, value):
         if not value or value == "":
             raise ValueError(f"{key} cannot be empty")
         return value
 
-    # # # validates that the push_notifications and geolocation_on is a boolean value
     @validates("push_notifications", "geolocation_on")
-    def validate_is_admin(self, key, value):
+    def validate_boolean(self, key, value):
         if not isinstance(value, bool):
             raise ValueError("Must be a boolean value")
         return value
 
-    # # # validates that the users email is valid upon entry
     @validates("email")
     def validate_email(self, key, value):
         email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
@@ -72,7 +70,6 @@ class User(db.Model, SerializerMixin):
 
         return value
 
-    # # validates that the user's phone number is in the correct format upon entry
     @validates("phone")
     def validate_phone(self, key, value):
         phone_regex = r"^\+?1?[-\s(]?\d{3}[-\s)]?\s?\d{3}[-\s]?\d{4}$"
@@ -80,7 +77,6 @@ class User(db.Model, SerializerMixin):
             raise ValueError("Invalid phone number format")
         return value
 
-    # # validates that the user's username and email are both unique
     @validates("username")
     def validate_username_unique(self, key, value):
         existing_user = User.query.filter(User.username == value).first()
@@ -211,7 +207,6 @@ class Event(db.Model, SerializerMixin):
     user_client = db.relationship("User_Client", back_populates="events")
     notifications = relationship("User_Notification", back_populates="event")
     instances = db.relationship("EventInstance", back_populates="event", cascade="all, delete-orphan")
-    exceptions = db.relationship("EventException", back_populates="event", cascade="all, delete-orphan")
 
     # Serialization rules
     serialize_rules = ("-user.events", "-user_client.events", "-instances", "-exceptions")
@@ -255,9 +250,10 @@ class EventInstance(db.Model, SerializerMixin):
 
     # Relationships
     event = db.relationship("Event", back_populates="instances")
+    exceptions = db.relationship("EventException", back_populates="event_instance", cascade="all, delete-orphan")
 
     # Serialization rules
-    serialize_rules = ("-event.instances",)
+    serialize_rules = ("-event.instances", "-exceptions.event_instance")
 
     # Validations
     @validates('instance_date')
@@ -292,11 +288,10 @@ class EventException(db.Model, SerializerMixin):
     cancelled = db.Column(db.Boolean, default=False)
 
     # Relationships
-    event_instance = db.relationship("EventInstance")
-    event = db.relationship("Event", back_populates="exceptions")
+    event_instance = db.relationship("EventInstance", back_populates="exceptions")
 
     # Serialization rules
-    serialize_rules = ("-event.exceptions",)
+    serialize_rules = ("-event_instance.exceptions",)
 
     # Validations
     @validates('exception_date')
@@ -320,6 +315,7 @@ class EventException(db.Model, SerializerMixin):
         if new_duration and (not isinstance(new_duration, int) or new_duration <= 0):
             raise ValueError("New duration must be a positive integer")
         return new_duration
+
     
 
 
@@ -389,6 +385,8 @@ class User_Parameters(db.Model, SerializerMixin):
     is_quickest = db.Column(db.Boolean, nullable=False)
     is_highways = db.Column(db.Boolean, nullable=False)
     is_tolls = db.Column(db.Boolean, nullable=False)
+    start_date = db.Column(DateTime, nullable=False, default=func.now())
+    end_date = db.Column(DateTime, nullable=True)
     
     user_id = db.Column(db.Integer, ForeignKey('users.id'), nullable=False)
     

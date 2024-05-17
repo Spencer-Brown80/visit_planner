@@ -3,7 +3,7 @@
 # Standard library imports
 
 # Remote library imports
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session, redirect, url_for
 from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
@@ -12,40 +12,18 @@ from sqlalchemy import MetaData
 
 #Review below imports for pipfile
 import os
+from datetime import datetime, timedelta
+
 
 
 # Local imports
 from config import app, db, api
-from models import db, User, User_Client, Event, User_Notification, User_Parameters 
+from models import User, User_Client, Event, User_Notification, User_Parameters 
 from models import User_Temp_Params, User_Notes, User_Reports, User_Client_Contacts, User_Client_Notes
 from models import Event, EventInstance, EventException
 
-
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DATABASE = os.environ.get("DB_URI", f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}")
-
-# Instantiate app, set attributes
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.json.compact = False
-app.secret_key = b"Y\xf1Xz\x00\xad|eQ\x80t \xca\x1a\x10K"
-
-
-# Define metadata, instantiate db
-metadata = MetaData(naming_convention={
-    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-})
-db = SQLAlchemy(metadata=metadata)
-migrate = Migrate(app, db)
-db.init_app(app)
-
-# Instantiate REST API
-api = Api(app)
-
-# Instantiate CORS
+# Ensure CORS is enabled
 CORS(app)
-
 
 # Views go here!
 
@@ -54,18 +32,56 @@ def index():
     return '<h1>Project Server</h1>'
 
 
-# User Routes
+
+# User Authentication Routes
+class Login(Resource):
+    def post(self):
+        data = request.get_json()
+        user = User.query.filter_by(username=data['username']).first()
+        if user and user.password == data['password']:  # Replace with password hashing check
+            session['user_id'] = user.id
+            session.permanent = True  # Ensure the session persists
+            app.permanent_session_lifetime = timedelta(minutes=30)
+            return user.to_dict(), 200
+        return {'error': 'Unauthorized'}, 401
+
+class Logout(Resource):
+    def post(self):
+        session.pop('user_id', None)
+        return {'message': 'Logged out'}, 200
+
+api.add_resource(Login, '/login')
+api.add_resource(Logout, '/logout')
+
+# Helper function to validate session
+def is_logged_in():
+    return 'user_id' in session
+
+
+
+# User Events Routes
+# User Events Routes
 class UserEvents(Resource):
     def get(self, id):
-        # show all user events
+        if not is_logged_in() or session['user_id'] != id:
+            return {'error': 'Forbidden'}, 403
+
         user = User.query.get_or_404(id)
         return jsonify([event.to_dict() for event in user.events])
 
     def post(self, id):
-        # post a user event
+        if not is_logged_in() or session['user_id'] != id:
+            return {'error': 'Forbidden'}, 403
+
         user = User.query.get_or_404(id)
         event_data = request.get_json()
-        event = Event(user_id=user.id, **event_data)
+
+        # Fetch user parameters and temporary parameters
+        user_params = User_Parameters.query.filter_by(user_id=id).all()
+        temp_params = User_Temp_Params.query.filter_by(user_id=id).all()
+        valid_event_data = validate_event_data(event_data, user_params, temp_params)
+
+        event = Event(user_id=user.id, **valid_event_data)
         db.session.add(event)
         db.session.commit()
         return event.to_dict(), 201
@@ -74,21 +90,33 @@ api.add_resource(UserEvents, '/users/<int:id>/events')
 
 class UserEvent(Resource):
     def get(self, id, event_id):
-        # show single user event
+        if not is_logged_in() or session['user_id'] != id:
+            return {'error': 'Forbidden'}, 403
+
         event = Event.query.get_or_404(event_id)
         return event.to_dict()
 
     def patch(self, id, event_id):
-        # update a single user event
+        if not is_logged_in() or session['user_id'] != id:
+            return {'error': 'Forbidden'}, 403
+
         event = Event.query.get_or_404(event_id)
         event_data = request.get_json()
-        for key, value in event_data.items():
+
+        # Fetch user parameters and temporary parameters
+        user_params = User_Parameters.query.filter_by(user_id=id).all()
+        temp_params = User_Temp_Params.query.filter_by(user_id=id).all()
+        valid_event_data = validate_event_data(event_data, user_params, temp_params)
+
+        for key, value in valid_event_data.items():
             setattr(event, key, value)
         db.session.commit()
         return event.to_dict()
 
     def delete(self, id, event_id):
-        # delete a single user event
+        if not is_logged_in() or session['user_id'] != id:
+            return {'error': 'Forbidden'}, 403
+
         event = Event.query.get_or_404(event_id)
         db.session.delete(event)
         db.session.commit()
@@ -96,6 +124,34 @@ class UserEvent(Resource):
 
 api.add_resource(UserEvent, '/users/<int:id>/events/<int:event_id>')
 
+# Validates Event against parameters before posting
+def validate_event_data(event_data, user_params, temp_params):
+    event_start_time = datetime.strptime(event_data['start_time'], '%Y-%m-%dT%H:%M:%S')
+    event_end_time = event_start_time + timedelta(minutes=event_data['duration'])
+
+    # Apply temporary parameters first (if they exist)
+    for param in temp_params:
+        if param.date.date() == event_start_time.date():
+            if param.is_start_mandatory and event_start_time < param.start_time:
+                event_start_time = param.start_time
+            if param.is_end_mandatory and event_end_time > param.end_time:
+                event_end_time = param.end_time
+
+    # Apply user parameters
+    for param in user_params:
+        day_of_week = param.day_of_week
+        if event_start_time.strftime('%A') == day_of_week:
+            param_start_date = param.start_date
+            param_end_date = param.end_date if param.end_date else datetime.max
+            if param_start_date <= event_start_time <= param_end_date:
+                if param.is_start_mandatory and event_start_time < param.start_time:
+                    event_start_time = param.start_time
+                if param.is_end_mandatory and event_end_time > param.end_time:
+                    event_end_time = param.end_time
+
+    event_data['start_time'] = event_start_time.strftime('%Y-%m-%dT%H:%M:%S')
+    event_data['end_time'] = event_end_time.strftime('%Y-%m-%dT%H:%M:%S')
+    return event_data
 class UserClientEvents(Resource):
     def get(self, id):
         # show all client events
@@ -183,7 +239,7 @@ api.add_resource(EventInstanceResource, '/events/<int:event_id>/instances/<int:i
 class EventExceptions(Resource):
     def get(self, event_id, instance_id):
         instance = EventInstance.query.get_or_404(instance_id)
-        return jsonify([exception.to_dict() for exception in instance.event.exceptions])
+        return jsonify([exception.to_dict() for exception in instance.exceptions])
 
     def post(self, event_id, instance_id):
         instance = EventInstance.query.get_or_404(instance_id)
@@ -194,6 +250,7 @@ class EventExceptions(Resource):
         return exception.to_dict(), 201
 
 api.add_resource(EventExceptions, '/events/<int:event_id>/instances/<int:instance_id>/exceptions')
+
 
 
 
@@ -221,8 +278,7 @@ class EventExceptionResource(Resource):
 
 api.add_resource(EventExceptionResource, '/events/<int:event_id>/instances/<int:instance_id>/exceptions/<int:exception_id>')
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
 
 class Users(Resource):
     def get(self):
@@ -303,19 +359,39 @@ class UserClientProfile(Resource):
 api.add_resource(UserClientProfile, '/user_clients/<int:id>')
 
 class UserParameters(Resource):
-    def get(self, id):
-        # view all user parameters
-        user = User.query.get_or_404(id)
-        return jsonify([param.to_dict() for param in user.parameters])
+    def get(self, user_id):
+        user_params = User_Parameters.query.filter_by(user_id=user_id).all()
+        return jsonify([param.to_dict() for param in user_params])
 
-    def post(self, id):
-        # add a user parameter
-        user = User.query.get_or_404(id)
-        param_data = request.get_json()
-        param = User_Parameters(user_id=user.id, **param_data)
-        db.session.add(param)
+    def post(self, user_id):
+        data = request.get_json()
+        start_date = data.get('start_date', datetime.now())
+        end_date = data.get('end_date', None)
+        
+        new_param = User_Parameters(
+            day_of_week=data['day_of_week'],
+            start_time=data['start_time'],
+            is_start_mandatory=data['is_start_mandatory'],
+            end_time=data['end_time'],
+            is_end_mandatory=data['is_end_mandatory'],
+            is_endpoint=data['is_endpoint'],
+            endpoint_address=data.get('endpoint_address'),
+            endpoint_city=data.get('endpoint_city'),
+            endpoint_state=data.get('endpoint_state'),
+            endpoint_zip=data.get('endpoint_zip'),
+            is_shortest=data['is_shortest'],
+            is_quickest=data['is_quickest'],
+            is_highways=data['is_highways'],
+            is_tolls=data['is_tolls'],
+            start_date=start_date,
+            end_date=end_date,
+            user_id=user_id
+        )
+        
+        db.session.add(new_param)
         db.session.commit()
-        return param.to_dict(), 201
+        return new_param.to_dict(), 201
+
 
 api.add_resource(UserParameters, '/users/<int:id>/user_parameters')
 
