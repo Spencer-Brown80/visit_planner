@@ -2,7 +2,7 @@ from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.associationproxy import association_proxy
 
 #Added components: Review for pipfile
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from sqlalchemy import DateTime, func, ForeignKey
 from sqlalchemy.orm import validates, relationship
 import re
@@ -10,6 +10,24 @@ import re
 
 
 from config import db
+
+
+# Custom serialization functions for time and date_time
+
+def serialize_datetime(value):
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return value
+
+def serialize_time(value):
+    if isinstance(value, time):
+        return value.isoformat()
+    return value
+
+
+
+
+
 
 # Models go here!
 #Establish User Class
@@ -25,7 +43,7 @@ class User(db.Model, SerializerMixin):
     zip = db.Column(db.String, nullable=False)
     phone = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False, unique=True)
-    date_created = db.Column(DateTime, nullable=False, default=func.now())
+    date_created = db.Column(db.DateTime, nullable=False, default=func.now())
     push_notifications = db.Column(db.Boolean, nullable=False)
     geolocation_on = db.Column(db.Boolean, nullable=False)
     username = db.Column(db.String, nullable=False, unique=True)
@@ -43,7 +61,16 @@ class User(db.Model, SerializerMixin):
     user_clients = association_proxy("events", "user_client")
 
     # Serialization rules
-    serialize_rules = ("-events", )
+    serialize_only = ('id', 'first_name', 'last_name', 'address', 'city', 'state', 'zip', 'phone', 'email', 'date_created', 'push_notifications', 'geolocation_on', 'username', 'password')
+
+    serialize_rules = ("-events", "-notifications.user", "-parameters.user", "-temp_params.user", "-notes.user", "-reports.user")
+    
+    def to_dict(self):
+        user_dict = super().to_dict()
+        user_dict['date_created'] = serialize_datetime(self.date_created)
+        return user_dict
+    
+    
 
     # Validations
     @validates("first_name", "last_name", "address", "city", "state", "zip", "password")
@@ -65,8 +92,9 @@ class User(db.Model, SerializerMixin):
             raise ValueError("Invalid email format")
 
         existing_user = User.query.filter(User.email == value).first()
-        if existing_user:
+        if existing_user and existing_user.id != self.id:
             raise ValueError(f"{key.capitalize()} must be unique")
+
 
         return value
 
@@ -80,8 +108,9 @@ class User(db.Model, SerializerMixin):
     @validates("username")
     def validate_username_unique(self, key, value):
         existing_user = User.query.filter(User.username == value).first()
-        if existing_user:
+        if existing_user and existing_user.id != self.id:
             raise ValueError(f"{key.capitalize()} must be unique")
+
 
         if not value:
             raise ValueError(f"{key} cannot be empty")
@@ -113,12 +142,19 @@ class User_Client(db.Model, SerializerMixin):
     events = db.relationship("Event", back_populates="user_client")
     
 
+    # relationships with user_client_contacts and user_client_notes
+    client_contacts = db.relationship("User_Client_Contacts", back_populates="user_client", cascade="all, delete-orphan")
+    client_notes = db.relationship("User_Client_Notes", back_populates="user_client", cascade="all, delete-orphan")
+
     # association proxies
     users = association_proxy("events", "user")
     
-
     # serialization rules
-    serialize_rules = ("-events", )
+    serialize_only = ('id', 'first_name', 'last_name', 'address_line_1', 'address_line_2', 'city', 'state', 'zip', 'phone', 'email', 'geolocation', 'geolocation_distance', 'address_notes', 'is_notified', 'notify_contact', 'notification_period')
+
+    
+    serialize_rules = ("-events.user_client", "-client_contacts.user_client", "-client_notes.user_client", "-users")
+
 
     # validates that the password isn't empty
     @validates("last_name", "address", "city", "state", "zip")
@@ -182,8 +218,8 @@ class Event(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True, unique=True)
     type = db.Column(db.Integer, nullable=False)
     status = db.Column(db.Integer, nullable=False)
-    date = db.Column(DateTime, nullable=False)
-    start_time = db.Column(DateTime, nullable=False)
+    date = db.Column(db.DateTime, nullable=False, index=True)
+    start_time = db.Column(db.Time, nullable=False)
     duration = db.Column(db.Integer, nullable=False)
     is_fixed = db.Column(db.Boolean, nullable=False)
     priority = db.Column(db.Integer, nullable=True)
@@ -197,7 +233,7 @@ class Event(db.Model, SerializerMixin):
     city = db.Column(db.String, nullable=True)
     state = db.Column(db.String, nullable=True)
     zip = db.Column(db.String, nullable=True)
-    date_created = db.Column(DateTime, nullable=False, default=func.now())
+    date_created = db.Column(db.DateTime, nullable=False, default=func.now())
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     user_client_id = db.Column(db.Integer, db.ForeignKey("user_clients.id"), nullable=True)
@@ -205,11 +241,21 @@ class Event(db.Model, SerializerMixin):
     # Relationships
     user = db.relationship("User", back_populates="events")
     user_client = db.relationship("User_Client", back_populates="events")
-    notifications = relationship("User_Notification", back_populates="event")
+    notifications = db.relationship("User_Notification", back_populates="event")
     instances = db.relationship("EventInstance", back_populates="event", cascade="all, delete-orphan")
 
     # Serialization rules
-    serialize_rules = ("-user.events", "-user_client.events", "-instances", "-exceptions")
+    serialize_only = ('id', 'type', 'status', 'date', 'start_time', 'duration', 'is_fixed', 'priority', 'is_recurring', 'recurrence_rule', 'notify_client', 'notes', 'is_completed', 'is_endpoint', 'address', 'city', 'state', 'zip', 'date_created')
+
+    #serialize_rules = ("-user.events", "-user_client.events", "-instances", "-notifications.event")
+    
+    
+    def to_dict(self):
+        event_dict = super().to_dict()
+        event_dict['date'] = self.date.isoformat() 
+        event_dict['start_time'] = self.start_time.isoformat() 
+        event_dict['date_created'] = self.date_created.isoformat() 
+        return event_dict
 
     # Validations
     @validates('date')
@@ -220,12 +266,9 @@ class Event(db.Model, SerializerMixin):
 
     @validates('start_time')
     def validate_start_time_format(self, key, start_time):
-        try:
-            datetime_str = f"{self.date.strftime('%Y-%m-%d')} {start_time.strftime('%I:%M %p')}"
-            datetime.strptime(datetime_str, '%Y-%m-%d %I:%M %p')
-            return start_time
-        except ValueError:
-            raise ValueError("Start time must be in correct datetime format")
+        if not isinstance(start_time, time):
+            raise ValueError("Start time must be a valid time object")
+        return start_time
 
     @validates('type')
     def validate_type(self, key, value):
@@ -243,8 +286,8 @@ class EventInstance(db.Model, SerializerMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
-    instance_date = db.Column(DateTime, nullable=False)
-    start_time = db.Column(DateTime, nullable=False)
+    instance_date = db.Column(db.DateTime, nullable=False)
+    start_time = db.Column(db.Time, nullable=False)
     duration = db.Column(db.Integer, nullable=False)
     modified = db.Column(db.Boolean, default=False)
 
@@ -253,8 +296,15 @@ class EventInstance(db.Model, SerializerMixin):
     exceptions = db.relationship("EventException", back_populates="event_instance", cascade="all, delete-orphan")
 
     # Serialization rules
+    serialize_only = ('id', 'event_id', 'instance_date', 'start_time', 'duration', 'modified')
     serialize_rules = ("-event.instances", "-exceptions.event_instance")
-
+    
+    def to_dict(self):
+        instance_dict = super().to_dict()
+        instance_dict['instance_date'] = serialize_datetime(self.instance_date)
+        instance_dict['start_time'] = serialize_time(self.start_time)
+        return instance_dict
+    
     # Validations
     @validates('instance_date')
     def validate_instance_date(self, key, instance_date):
@@ -263,12 +313,10 @@ class EventInstance(db.Model, SerializerMixin):
         return instance_date
 
     @validates('start_time')
-    def validate_start_time(self, key, start_time):
-        try:
-            datetime.strptime(start_time, '%H:%M:%S')
-            return start_time
-        except ValueError:
-            raise ValueError("Start time must be in correct time format")
+    def validate_start_time_format(self, key, start_time):
+        if not isinstance(start_time, time):
+            raise ValueError("Start time must be a valid time object")
+        return start_time
 
     @validates('duration')
     def validate_duration(self, key, duration):
@@ -276,14 +324,14 @@ class EventInstance(db.Model, SerializerMixin):
             raise ValueError("Duration must be a positive integer")
         return duration
 
-# Define EventException class
+# Define EventException class    
 class EventException(db.Model, SerializerMixin):
     __tablename__ = "event_exceptions"
 
     id = db.Column(db.Integer, primary_key=True)
     event_instance_id = db.Column(db.Integer, db.ForeignKey('event_instances.id'), nullable=False)
-    exception_date = db.Column(DateTime, nullable=True)
-    new_start_time = db.Column(DateTime, nullable=True)
+    exception_date = db.Column(db.DateTime, nullable=True)
+    new_start_time = db.Column(db.Time, nullable=True)
     new_duration = db.Column(db.Integer, nullable=True)
     cancelled = db.Column(db.Boolean, default=False)
 
@@ -291,7 +339,15 @@ class EventException(db.Model, SerializerMixin):
     event_instance = db.relationship("EventInstance", back_populates="exceptions")
 
     # Serialization rules
+    serialize_only = ('id', 'event_instance_id', 'exception_date', 'new_start_time', 'new_duration', 'cancelled')
+
     serialize_rules = ("-event_instance.exceptions",)
+    
+    def to_dict(self):
+        exception_dict = super().to_dict()
+        exception_dict['exception_date'] = serialize_datetime(self.exception_date)
+        exception_dict['new_start_time'] = serialize_time(self.new_start_time)
+        return exception_dict
 
     # Validations
     @validates('exception_date')
@@ -302,12 +358,9 @@ class EventException(db.Model, SerializerMixin):
 
     @validates('new_start_time')
     def validate_new_start_time(self, key, new_start_time):
-        if new_start_time:
-            try:
-                datetime.strptime(new_start_time, '%H:%M:%S')
-                return new_start_time
-            except ValueError:
-                raise ValueError("New start time must be in correct time format")
+    
+        if not isinstance(new_start_time, time):
+            raise ValueError("Start time must be a valid time object")
         return new_start_time
 
     @validates('new_duration')
@@ -334,6 +387,8 @@ NOTIFICATION_REASON_MAP = {
     2: "Schedule Change"
 }
 
+# Define User_Notification class   
+
 class User_Notification(db.Model, SerializerMixin):
     __tablename__ = "user_notifications"
 
@@ -341,15 +396,27 @@ class User_Notification(db.Model, SerializerMixin):
     type = db.Column(db.Integer, nullable=False)
     reason = db.Column(db.Integer, nullable=False)
     notification_period = db.Column(db.Integer, nullable=False)
-    date_created = db.Column(DateTime, nullable=False, default=func.now())
+    date_created = db.Column(db.DateTime, nullable=False, default=func.now())
     
     # One-to-many relationship with Users
-    user_id = db.Column(db.Integer, ForeignKey('users.id'), nullable=False)
-    user = relationship("User", back_populates="notifications")
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user = db.relationship("User", back_populates="notifications")
 
     # Event_id
-    event_id = db.Column(db.Integer, ForeignKey('events.id'), nullable=False)
-    event = relationship("Event")
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
+    event = db.relationship("Event")
+    
+    # Serialization rules
+    serialize_only = ('id', 'type', 'reason', 'notification_period', 'date_created', 'event_id')
+
+    serialize_rules = ("-user.notifications", "-event.notifications")
+    
+    def to_dict(self):
+        user_notification_dict = super().to_dict()
+        user_notification_dict['date_created'] = serialize_datetime(self.date_created)
+        return user_notification_dict
+
+    
     
     #Type Validation    
     @validates('type')
@@ -372,9 +439,9 @@ class User_Parameters(db.Model, SerializerMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     day_of_week = db.Column(db.String, nullable=False)
-    start_time = db.Column(DateTime, nullable=False)
+    start_time = db.Column(db.Time, nullable=False)
     is_start_mandatory = db.Column(db.Boolean, nullable=False)
-    end_time = db.Column(DateTime, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
     is_end_mandatory = db.Column(db.Boolean, nullable=False)
     is_endpoint = db.Column(db.Boolean, nullable=False)
     endpoint_address = db.Column(db.String, nullable=True)
@@ -385,16 +452,26 @@ class User_Parameters(db.Model, SerializerMixin):
     is_quickest = db.Column(db.Boolean, nullable=False)
     is_highways = db.Column(db.Boolean, nullable=False)
     is_tolls = db.Column(db.Boolean, nullable=False)
-    start_date = db.Column(DateTime, nullable=False, default=func.now())
-    end_date = db.Column(DateTime, nullable=True)
+    start_date = db.Column(db.DateTime, nullable=False, default=func.now())
+    end_date = db.Column(db.DateTime, nullable=True)
     
-    user_id = db.Column(db.Integer, ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
     
-    user = relationship("User", back_populates="parameters")
+    user = db.relationship("User", back_populates="parameters")
     
     # Serialization rules
-    serialize_rules = ("-user",)
+    serialize_only = ('id', 'day_of_week', 'start_time', 'is_start_mandatory', 'end_time', 'is_end_mandatory', 'is_endpoint', 'endpoint_address', 'endpoint_city', 'endpoint_state', 'endpoint_zip', 'is_shortest', 'is_quickest', 'is_highways', 'is_tolls', 'start_date', 'end_date')
+    serialize_rules = ("-user.parameters",)
+
+    def to_dict(self):
+        params_dict = super().to_dict()
+        params_dict['start_time'] = serialize_time(self.start_time)
+        params_dict['end_time'] = serialize_time(self.end_time)
+        params_dict['start_date'] = serialize_datetime(self.start_date)
+        params_dict['end_date'] = serialize_datetime(self.end_date) if self.end_date else None
+        return params_dict
+
 
     # Validations
     @validates('day_of_week')
@@ -406,7 +483,7 @@ class User_Parameters(db.Model, SerializerMixin):
 
     @validates('start_time', 'end_time')
     def validate_datetime(self, key, value):
-        if not isinstance(value, datetime):
+        if not isinstance(value, time):
             raise ValueError(f"{key.capitalize()} must be a valid datetime object")
         return value
 
@@ -424,10 +501,10 @@ class User_Temp_Params(db.Model, SerializerMixin):
     __tablename__ = "user_temp_params"
 
     id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(DateTime, nullable=False)
-    start_time = db.Column(DateTime, nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
+    start_time = db.Column(db.Time, nullable=False)
     is_start_mandatory = db.Column(db.Boolean, nullable=False)
-    end_time = db.Column(DateTime, nullable=False)
+    end_time = db.Column(db.Time, nullable=False)
     is_end_mandatory = db.Column(db.Boolean, nullable=False)
     is_endpoint = db.Column(db.Boolean, nullable=False)
     endpoint_address = db.Column(db.String, nullable=True)
@@ -441,12 +518,32 @@ class User_Temp_Params(db.Model, SerializerMixin):
     nullify_fixed = db.Column(db.Boolean, nullable=False)
     nullify_priority = db.Column(db.Boolean, nullable=False)
     
-    user_id = db.Column(db.Integer, ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
-    user = relationship("User", back_populates="temp_params")
+    user = db.relationship("User", back_populates="temp_params")
+    
+    #serialixze rules
+    serialize_only = ('id', 'date', 'start_time', 'is_start_mandatory', 'end_time', 'is_end_mandatory', 'is_endpoint', 'endpoint_address', 'endpoint_city', 'endpoint_state', 'endpoint_zip', 'is_shortest', 'is_quickest', 'is_highways', 'is_tolls', 'nullify_fixed', 'nullify_priority')
+
+    serialize_rules = ("-user.temp_params",)
+    
+    def to_dict(self):
+        temp_params_dict = super().to_dict()
+        temp_params_dict['date'] = serialize_datetime(self.date)
+        temp_params_dict['start_time'] = serialize_time(self.start_time)
+        temp_params_dict['end_time'] = serialize_time(self.end_time)
+        
+        return temp_params_dict
+
     
     # Validations
-    @validates('date', 'start_time', 'end_time')
+    @validates('start_time', 'end_time')
+    def validate_time(self, key, value):
+        if not isinstance(value, time):
+            raise ValueError(f"{key.capitalize()} must be a valid datetime object")
+        return value
+    
+    @validates('date')
     def validate_datetime(self, key, value):
         if not isinstance(value, datetime):
             raise ValueError(f"{key.capitalize()} must be a valid datetime object")
@@ -476,14 +573,21 @@ class User_Notes(db.Model, SerializerMixin):
     type = db.Column(db.Integer, nullable=False)
     
     content = db.Column(db.Text, nullable=False)
-    date_created = db.Column(DateTime, nullable=False, default=func.now())
+    date_created = db.Column(db.DateTime, nullable=False, default=func.now())
 
-    user_id = db.Column(db.Integer, ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
-    user = relationship("User", back_populates="notes")
+    user = db.relationship("User", back_populates="notes")
     
     # Serialization rules
-    serialize_rules = ("-user",)
+    serialize_only = ('id', 'type', 'content', 'date_created', 'user_id')
+
+    serialize_rules = ("-user.notes",)
+    
+    def to_dict(self):
+        user_notes_dict = super().to_dict()
+        user_notes_dict['date_created'] = serialize_datetime(self.date_created)
+        return user_notes_dict
 
     # Validations
     @validates('type')
@@ -517,14 +621,21 @@ class User_Reports(db.Model, SerializerMixin):
     name = db.Column(db.Integer, nullable=False)
 
     report_content = db.Column(db.Text, nullable=False)
-    date_created = db.Column(DateTime, nullable=False, default=func.now())
+    date_created = db.Column(db.DateTime, nullable=False, default=func.now())
 
-    user_id = db.Column(db.Integer, ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
-    user = relationship("User", back_populates="reports")
+    user = db.relationship("User", back_populates="reports")
     
-    # Serialization rules
-    serialize_rules = ("-user",)
+    # Serialization rules  
+    serialize_only = ('id', 'name', 'report_content', 'date_created', 'user_id')
+
+    serialize_rules = ("-user.reports",)
+    
+    def to_dict(self):
+        user_reports_dict = super().to_dict()
+        user_reports_dict['date_created'] = serialize_datetime(self.date_created)
+        return user_reports_dict
 
     # Validations
     @validates('name')
@@ -566,12 +677,13 @@ class User_Client_Contacts(db.Model, SerializerMixin):
     is_notified = db.Column(db.Boolean, nullable=False)
 
     
-    user_client_id = db.Column(db.Integer, ForeignKey('user_clients.id'), nullable=False)
+    user_client_id = db.Column(db.Integer, db.ForeignKey('user_clients.id'), nullable=False)
     
-    user_client = relationship("User_Client", back_populates="client_contacts")
+    user_client = db.relationship("User_Client", back_populates="client_contacts")
     
 # Serialization rules
-    serialize_rules = ("-user_client",)
+    serialize_only = ("id", "type", "name", "phone", "email", "notes", "is_notified", "user_client_id")
+    serialize_rules = ("-user_client.client_contacts", "-user_client.client_notes")
 
     # Validations
     @validates('type')
@@ -630,14 +742,23 @@ class User_Client_Notes(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.Integer, nullable=False)
     content = db.Column(db.Text, nullable=False)
-    date_created = db.Column(DateTime, nullable=False, default=func.now())
+    date_created = db.Column(db.DateTime, nullable=False, default=func.now())
 
-    user_client_id = db.Column(db.Integer, ForeignKey('user_clients.id'), nullable=False)
+    user_client_id = db.Column(db.Integer, db.ForeignKey('user_clients.id'), nullable=False)
     
-    user_client = relationship("User_Client", back_populates="client_notes")
+    user_client = db.relationship("User_Client", back_populates="client_notes")
 
 # Serialization rules
-    serialize_rules = ("-user_client",)
+    
+    serialize_only = ('id', 'type', 'content', 'date_created', 'user_client_id')
+
+    serialize_rules = ("-user_client.client_contacts", "-user_client.client_notes")
+
+    
+    def to_dict(self):
+        client_notes_dict = super().to_dict()
+        client_notes_dict['date_created'] = serialize_datetime(self.date_created)
+        return client_notes_dict
 
     # Validations
     @validates('type')

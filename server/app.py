@@ -12,7 +12,7 @@ from sqlalchemy import MetaData
 
 #Review below imports for pipfile
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 
 
@@ -22,16 +22,14 @@ from models import User, User_Client, Event, User_Notification, User_Parameters
 from models import User_Temp_Params, User_Notes, User_Reports, User_Client_Contacts, User_Client_Notes
 from models import Event, EventInstance, EventException
 
-# Ensure CORS is enabled
-CORS(app)
 
-# Views go here!
+# Set secret key for session management
+app.secret_key = b"Y\xf1Xz\x00\xad|eQ\x80t \xca\x1a\x10K"
+app.permanent_session_lifetime = timedelta(minutes=30)
 
-@app.route('/')
-def index():
-    return '<h1>Project Server</h1>'
-
-
+# Helper function to validate session
+def is_logged_in():
+    return 'user_id' in session
 
 # User Authentication Routes
 class Login(Resource):
@@ -41,7 +39,6 @@ class Login(Resource):
         if user and user.password == data['password']:  # Replace with password hashing check
             session['user_id'] = user.id
             session.permanent = True  # Ensure the session persists
-            app.permanent_session_lifetime = timedelta(minutes=30)
             return user.to_dict(), 200
         return {'error': 'Unauthorized'}, 401
 
@@ -53,9 +50,16 @@ class Logout(Resource):
 api.add_resource(Login, '/login')
 api.add_resource(Logout, '/logout')
 
-# Helper function to validate session
-def is_logged_in():
-    return 'user_id' in session
+# Example route requiring login
+@app.route('/protected')
+def protected():
+    if not is_logged_in():
+        return {'error': 'Unauthorized'}, 401
+    return {'message': 'This is a protected route'}, 200
+
+
+
+
 
 
 
@@ -67,7 +71,12 @@ class UserEvents(Resource):
             return {'error': 'Forbidden'}, 403
 
         user = User.query.get_or_404(id)
-        return jsonify([event.to_dict() for event in user.events])
+        events = [event.to_dict() for event in user.events]
+        return jsonify(events)
+    
+    
+     
+        
 
     def post(self, id):
         if not is_logged_in() or session['user_id'] != id:
@@ -76,12 +85,16 @@ class UserEvents(Resource):
         user = User.query.get_or_404(id)
         event_data = request.get_json()
 
-        # Fetch user parameters and temporary parameters
-        user_params = User_Parameters.query.filter_by(user_id=id).all()
-        temp_params = User_Temp_Params.query.filter_by(user_id=id).all()
-        valid_event_data = validate_event_data(event_data, user_params, temp_params)
+        # Ensure proper format for start_time and date
+        if 'start_time' in event_data:
+            event_data['start_time'] = time.fromisoformat(event_data['start_time'])
+        if 'date' in event_data:
+            event_data['date'] = datetime.fromisoformat(event_data['date'])
+        # Convert date_created to datetime if provided
+        if 'date_created' in event_data:
+            event_data['date_created'] = datetime.fromisoformat(event_data['date_created'])
 
-        event = Event(user_id=user.id, **valid_event_data)
+        event = Event(user_id=user.id, **event_data)
         db.session.add(event)
         db.session.commit()
         return event.to_dict(), 201
@@ -103,12 +116,16 @@ class UserEvent(Resource):
         event = Event.query.get_or_404(event_id)
         event_data = request.get_json()
 
-        # Fetch user parameters and temporary parameters
-        user_params = User_Parameters.query.filter_by(user_id=id).all()
-        temp_params = User_Temp_Params.query.filter_by(user_id=id).all()
-        valid_event_data = validate_event_data(event_data, user_params, temp_params)
+        # Ensure proper format for start_time and date
+        if 'start_time' in event_data:
+            event_data['start_time'] = time.fromisoformat(event_data['start_time'])
+        if 'date' in event_data:
+            event_data['date'] = datetime.fromisoformat(event_data['date'])
+        # Convert date_created to datetime if provided
+        if 'date_created' in event_data:
+            event_data['date_created'] = datetime.fromisoformat(event_data['date_created'])
 
-        for key, value in valid_event_data.items():
+        for key, value in event_data.items():
             setattr(event, key, value)
         db.session.commit()
         return event.to_dict()
@@ -124,61 +141,69 @@ class UserEvent(Resource):
 
 api.add_resource(UserEvent, '/users/<int:id>/events/<int:event_id>')
 
-# Validates Event against parameters before posting
-def validate_event_data(event_data, user_params, temp_params):
-    event_start_time = datetime.strptime(event_data['start_time'], '%Y-%m-%dT%H:%M:%S')
-    event_end_time = event_start_time + timedelta(minutes=event_data['duration'])
 
-    # Apply temporary parameters first (if they exist)
-    for param in temp_params:
-        if param.date.date() == event_start_time.date():
-            if param.is_start_mandatory and event_start_time < param.start_time:
-                event_start_time = param.start_time
-            if param.is_end_mandatory and event_end_time > param.end_time:
-                event_end_time = param.end_time
-
-    # Apply user parameters
-    for param in user_params:
-        day_of_week = param.day_of_week
-        if event_start_time.strftime('%A') == day_of_week:
-            param_start_date = param.start_date
-            param_end_date = param.end_date if param.end_date else datetime.max
-            if param_start_date <= event_start_time <= param_end_date:
-                if param.is_start_mandatory and event_start_time < param.start_time:
-                    event_start_time = param.start_time
-                if param.is_end_mandatory and event_end_time > param.end_time:
-                    event_end_time = param.end_time
-
-    event_data['start_time'] = event_start_time.strftime('%Y-%m-%dT%H:%M:%S')
-    event_data['end_time'] = event_end_time.strftime('%Y-%m-%dT%H:%M:%S')
-    return event_data
 class UserClientEvents(Resource):
     def get(self, id):
-        # show all client events
-        user_client = User_Client.query.get_or_404(id)
-        return jsonify([event.to_dict() for event in user_client.events])
+        if not is_logged_in() or session['user_id'] != id:
+            return {'error': 'Forbidden'}, 403
 
+        user_client = User.query.get_or_404(id)
+        events = [event.to_dict() for event in user_client.events]
+        return jsonify(events)
+    
     def post(self, id):
-        # post a client event
-        user_client = User_Client.query.get_or_404(id)
+        if not is_logged_in() or session['user_id'] != id:
+            return {'error': 'Forbidden'}, 403
+
+        user_client = User.query.get_or_404(id)
         event_data = request.get_json()
+
+        # Ensure proper format for start_time and date
+        if 'start_time' in event_data:
+            event_data['start_time'] = time.fromisoformat(event_data['start_time'])
+        if 'date' in event_data:
+            event_data['date'] = datetime.fromisoformat(event_data['date'])
+        # Convert date_created to datetime if provided
+        if 'date_created' in event_data:
+            event_data['date_created'] = datetime.fromisoformat(event_data['date_created'])
+
         event = Event(user_client_id=user_client.id, **event_data)
         db.session.add(event)
         db.session.commit()
         return event.to_dict(), 201
+    
+    
+    
+    
 
 api.add_resource(UserClientEvents, '/user_clients/<int:id>/events')
 
 class UserClientEvent(Resource):
     def get(self, id, event_id):
         # show single client event
+        if not is_logged_in() or session['user_id'] != id:
+            return {'error': 'Forbidden'}, 403
+
         event = Event.query.get_or_404(event_id)
         return event.to_dict()
 
     def patch(self, id, event_id):
         # update a single client event
+        if not is_logged_in() or session['user_id'] != id:
+            return {'error': 'Forbidden'}, 403
+
         event = Event.query.get_or_404(event_id)
         event_data = request.get_json()
+
+        # Ensure proper format for start_time and date
+        if 'start_time' in event_data:
+            event_data['start_time'] = time.fromisoformat(event_data['start_time'])
+        if 'date' in event_data:
+            event_data['date'] = datetime.fromisoformat(event_data['date'])
+        # Convert date_created to datetime if provided
+        if 'date_created' in event_data:
+            event_data['date_created'] = datetime.fromisoformat(event_data['date_created'])
+
         for key, value in event_data.items():
             setattr(event, key, value)
         db.session.commit()
@@ -186,6 +211,9 @@ class UserClientEvent(Resource):
 
     def delete(self, id, event_id):
         # delete a single client event
+        if not is_logged_in() or session['user_id'] != id:
+            return {'error': 'Forbidden'}, 403
+
         event = Event.query.get_or_404(event_id)
         db.session.delete(event)
         db.session.commit()
@@ -197,12 +225,26 @@ api.add_resource(UserClientEvent, '/user_clients/<int:id>/events/<int:event_id>'
 # EventInstances: Handles operations related to all instances of a specific event.
 class EventInstances(Resource):
     def get(self, event_id):
+        if not is_logged_in() or session['user_id'] != id:
+            return {'error': 'Forbidden'}, 403
         event = Event.query.get_or_404(event_id)
         return jsonify([instance.to_dict() for instance in event.instances])
 
     def post(self, event_id):
+        if not is_logged_in() or session['user_id'] != id:
+            return {'error': 'Forbidden'}, 403
         event = Event.query.get_or_404(event_id)
         instance_data = request.get_json()
+        
+        # Ensure proper format for instance_date and start_time
+        if 'instance_date' in instance_data:
+            instance_data['instance_date'] = datetime.fromisoformat(instance_data['instance_date'])
+        if 'start_time' in instance_data:
+            instance_data['start_time'] = time.fromisoformat(instance_data['start_time'])
+
+        instance_data.pop('event_id', None)  # Ensure 'event_id' is not in instance_data
+
+
         instance = EventInstance(event_id=event.id, **instance_data)
         db.session.add(instance)
         db.session.commit()
@@ -214,18 +256,28 @@ api.add_resource(EventInstances, '/events/<int:event_id>/instances')
 # EventInstanceResource: Handles operations on a single instance of an event.
 class EventInstanceResource(Resource):
     def get(self, event_id, instance_id):
+
         instance = EventInstance.query.get_or_404(instance_id)
         return instance.to_dict()
 
     def patch(self, event_id, instance_id):
+
         instance = EventInstance.query.get_or_404(instance_id)
         instance_data = request.get_json()
+        
+        # Ensure proper format for instance_date and start_time
+        if 'instance_date' in instance_data:
+            instance_data['instance_date'] = datetime.fromisoformat(instance_data['instance_date'])
+        if 'start_time' in instance_data:
+            instance_data['start_time'] = time.fromisoformat(instance_data['start_time'])
+
+        
         for key, value in instance_data.items():
             setattr(instance, key, value)
         db.session.commit()
         return instance.to_dict()
 
-    def delete(self, event_id, instance_id):
+    def delete(self, event_id, instance_id):        
         instance = EventInstance.query.get_or_404(instance_id)
         db.session.delete(instance)
         db.session.commit()
@@ -243,8 +295,18 @@ class EventExceptions(Resource):
 
     def post(self, event_id, instance_id):
         instance = EventInstance.query.get_or_404(instance_id)
-        exception_data = request.get_json()
-        exception = EventException(event_instance_id=instance.id, **exception_data)
+        event_data = request.get_json()
+        
+        # Ensure proper format for start_time and date
+        if 'new_start_time' in event_data:
+            event_data['new_start_time'] = time.fromisoformat(event_data['new_start_time'])
+        if 'exception_date' in event_data:
+            event_data['exception_date'] = datetime.fromisoformat(event_data['exception_date'])
+        
+        # Remove event_instance_id from event_data if it exists to avoid conflict
+        event_data.pop('event_instance_id', None)
+        
+        exception = EventException(event_instance_id=instance.id, **event_data)
         db.session.add(exception)
         db.session.commit()
         return exception.to_dict(), 201
@@ -264,8 +326,15 @@ class EventExceptionResource(Resource):
 
     def patch(self, event_id, instance_id, exception_id):
         exception = EventException.query.get_or_404(exception_id)
-        exception_data = request.get_json()
-        for key, value in exception_data.items():
+        event_data = request.get_json()
+        
+        # Ensure proper format for start_time and date
+        if 'new_start_time' in event_data:
+            event_data['new_start_time'] = time.fromisoformat(event_data['new_start_time'])
+        if 'exception_date' in event_data:
+            event_data['exception_date'] = datetime.fromisoformat(event_data['exception_date'])
+        
+        for key, value in event_data.items():
             setattr(exception, key, value)
         db.session.commit()
         return exception.to_dict()
@@ -284,10 +353,16 @@ class Users(Resource):
     def get(self):
         # return all users (Admin-not working)
         return jsonify([user.to_dict() for user in User.query.all()])
+    
+    
 
     def post(self):
         # add a user at login
         user_data = request.get_json()
+        
+        # Ensure date_created is a datetime object
+        user_data['date_created'] = datetime.now()
+        
         user = User(**user_data)
         db.session.add(user)
         db.session.commit()
@@ -305,6 +380,22 @@ class UserProfile(Resource):
         # edit user profile
         user = User.query.get_or_404(id)
         user_data = request.get_json()
+        
+        # Remove date_created from the update data if present
+        user_data.pop('date_created', None)
+        
+        # Check for unique constraints before setting new values
+        if 'email' in user_data and user_data['email'] != user.email:
+            existing_user = User.query.filter(User.email == user_data['email']).first()
+            if existing_user and existing_user.id != user.id:
+                return {'error': 'Email must be unique'}, 400
+
+        if 'username' in user_data and user_data['username'] != user.username:
+            existing_user = User.query.filter(User.username == user_data['username']).first()
+            if existing_user and existing_user.id != user.id:
+                return {'error': 'Username must be unique'}, 400
+
+        
         for key, value in user_data.items():
             setattr(user, key, value)
         db.session.commit()
@@ -360,64 +451,77 @@ api.add_resource(UserClientProfile, '/user_clients/<int:id>')
 
 class UserParameters(Resource):
     def get(self, user_id):
-        user_params = User_Parameters.query.filter_by(user_id=user_id).all()
-        return jsonify([param.to_dict() for param in user_params])
+        user = User.query.get_or_404(user_id)
+        return jsonify([param.to_dict() for param in user.parameters])
 
     def post(self, user_id):
-        data = request.get_json()
-        start_date = data.get('start_date', datetime.now())
-        end_date = data.get('end_date', None)
+        param_data = request.get_json()
         
-        new_param = User_Parameters(
-            day_of_week=data['day_of_week'],
-            start_time=data['start_time'],
-            is_start_mandatory=data['is_start_mandatory'],
-            end_time=data['end_time'],
-            is_end_mandatory=data['is_end_mandatory'],
-            is_endpoint=data['is_endpoint'],
-            endpoint_address=data.get('endpoint_address'),
-            endpoint_city=data.get('endpoint_city'),
-            endpoint_state=data.get('endpoint_state'),
-            endpoint_zip=data.get('endpoint_zip'),
-            is_shortest=data['is_shortest'],
-            is_quickest=data['is_quickest'],
-            is_highways=data['is_highways'],
-            is_tolls=data['is_tolls'],
-            start_date=start_date,
-            end_date=end_date,
-            user_id=user_id
-        )
+        # Ensure proper format for start_date and start_time
+        if 'start_date' in param_data:
+            param_data['start_date'] = datetime.fromisoformat(param_data['start_date'])
+        if 'start_time' in param_data:
+            param_data['start_time'] = time.fromisoformat(param_data['start_time'])
+        # Ensure proper format for end_date and end_time, allowing for null values
+        if 'end_date' in param_data and param_data['end_date']:
+            param_data['end_date'] = datetime.fromisoformat(param_data['end_date'])
+        else:
+            param_data['end_date'] = None
+            
+        if 'end_time' in param_data and param_data['end_time']:
+            param_data['end_time'] = time.fromisoformat(param_data['end_time'])
+        else:
+            param_data['end_time'] = None
+            
+        param_data['user_id'] = user_id
+        
+        new_param = User_Parameters(**param_data)
         
         db.session.add(new_param)
         db.session.commit()
         return new_param.to_dict(), 201
 
-
-api.add_resource(UserParameters, '/users/<int:id>/user_parameters')
+api.add_resource(UserParameters, '/users/<int:user_id>/user_parameters')
 
 class UserParameter(Resource):
-    def get(self, id, param_id):
+    def get(self, user_id, param_id):
         # get a specified user parameter
-        param = User_Parameters.query.get_or_404(param_id)
-        return param.to_dict()
+        user_param = User_Parameters.query.get_or_404(param_id)
+        return user_param.to_dict()
 
-    def patch(self, id, param_id):
+    def patch(self, user_id, param_id):
         # update specified user parameter
         param = User_Parameters.query.get_or_404(param_id)
         param_data = request.get_json()
+        
+        if 'start_date' in param_data:
+            param_data['start_date'] = datetime.fromisoformat(param_data['start_date'])
+        if 'start_time' in param_data:
+            param_data['start_time'] = time.fromisoformat(param_data['start_time'])
+        # Ensure proper format for end_date and end_time, allowing for null values
+        if 'end_date' in param_data and param_data['end_date']:
+            param_data['end_date'] = datetime.fromisoformat(param_data['end_date'])
+        else:
+            param_data['end_date'] = None
+            
+        if 'end_time' in param_data and param_data['end_time']:
+            param_data['end_time'] = time.fromisoformat(param_data['end_time'])
+        else:
+            param_data['end_time'] = None
+            
         for key, value in param_data.items():
             setattr(param, key, value)
         db.session.commit()
         return param.to_dict()
 
-    def delete(self, id, param_id):
+    def delete(self, user_id, param_id):
         # delete user parameter
         param = User_Parameters.query.get_or_404(param_id)
         db.session.delete(param)
         db.session.commit()
         return '', 204
 
-api.add_resource(UserParameter, '/users/<int:id>/user_parameters/<int:param_id>')
+api.add_resource(UserParameter, '/users/<int:user_id>/user_parameters/<int:param_id>')
 
 class UserNotes(Resource):
     def get(self, id):
@@ -429,6 +533,15 @@ class UserNotes(Resource):
         # add a user note
         user = User.query.get_or_404(id)
         note_data = request.get_json()
+        
+        # Ensure proper format for date_created
+        if 'date_created' in note_data:
+            note_data['date_created'] = datetime.fromisoformat(note_data['date_created'])
+        
+        # Remove user_id if it exists in note_data to avoid conflict
+        if 'user_id' in note_data:
+            del note_data['user_id']
+        
         note = User_Notes(user_id=user.id, **note_data)
         db.session.add(note)
         db.session.commit()
@@ -446,6 +559,11 @@ class UserNote(Resource):
         # update selected note
         note = User_Notes.query.get_or_404(note_id)
         note_data = request.get_json()
+        
+        # Ensure proper format for date_created
+        if 'date_created' in note_data:
+            note_data['date_created'] = datetime.fromisoformat(note_data['date_created'])
+        
         for key, value in note_data.items():
             setattr(note, key, value)
         db.session.commit()
@@ -470,6 +588,15 @@ class UserNotifications(Resource):
         # add a notification
         user = User.query.get_or_404(id)
         notification_data = request.get_json()
+        
+        # Ensure proper format for date_created
+        if 'date_created' in notification_data:
+            notification_data['date_created'] = datetime.fromisoformat(notification_data['date_created'])
+        
+        # Remove user_id if it exists in notification_data to avoid conflict
+        if 'user_id' in notification_data:
+            del notification_data['user_id']
+        
         notification = User_Notification(user_id=user.id, **notification_data)
         db.session.add(notification)
         db.session.commit()
@@ -534,6 +661,11 @@ class UserClientContacts(Resource):
         # add a client contact
         user_client = User_Client.query.get_or_404(id)
         contact_data = request.get_json()
+        
+        # Ensure user_client_id is not in contact_data to avoid conflict
+        if 'user_client_id' in contact_data:
+            del contact_data['user_client_id']
+        
         contact = User_Client_Contacts(user_client_id=user_client.id, **contact_data)
         db.session.add(contact)
         db.session.commit()
@@ -565,6 +697,7 @@ class UserClientContact(Resource):
 
 api.add_resource(UserClientContact, '/user_clients/<int:id>/user_client_contacts/<int:contact_id>')
 
+
 class UserClientNotes(Resource):
     def get(self, id):
         # view all client notes
@@ -575,6 +708,14 @@ class UserClientNotes(Resource):
         # add a client note
         user_client = User_Client.query.get_or_404(id)
         note_data = request.get_json()
+        # Ensure proper format for date_created
+        if 'date_created' in note_data:
+            note_data['date_created'] = datetime.fromisoformat(note_data['date_created'])
+        
+        # Remove user_client_id if it exists in note_data to avoid conflict
+        if 'user_client_id' in note_data:
+            del note_data['user_client_id']
+        
         note = User_Client_Notes(user_client_id=user_client.id, **note_data)
         db.session.add(note)
         db.session.commit()
@@ -592,6 +733,11 @@ class UserClientNote(Resource):
         # update client note
         note = User_Client_Notes.query.get_or_404(note_id)
         note_data = request.get_json()
+        # Ensure proper format for date_created
+        if 'date_created' in note_data:
+            note_data['date_created'] = datetime.fromisoformat(note_data['date_created'])
+        
+        
         for key, value in note_data.items():
             setattr(note, key, value)
         db.session.commit()
@@ -608,14 +754,26 @@ api.add_resource(UserClientNote, '/user_clients/<int:id>/user_client_notes/<int:
 
 class UserTempParams(Resource):
     def get(self, id):
-        # view all user temp params
+        # View all user temp params
         user = User.query.get_or_404(id)
         return jsonify([param.to_dict() for param in user.temp_params])
 
     def post(self, id):
-        # add a user temp param
+        # Add a user temp param
         user = User.query.get_or_404(id)
         param_data = request.get_json()
+        
+        # Ensure proper format for date and time fields
+        if 'date' in param_data:
+            param_data['date'] = datetime.fromisoformat(param_data['date'])
+        if 'start_time' in param_data:
+            param_data['start_time'] = time.fromisoformat(param_data['start_time'])
+        
+        if 'end_time' in param_data and param_data['end_time']:
+            param_data['end_time'] = time.fromisoformat(param_data['end_time'])
+        else:
+            param_data['end_time'] = None
+        
         param = User_Temp_Params(user_id=user.id, **param_data)
         db.session.add(param)
         db.session.commit()
@@ -625,35 +783,36 @@ api.add_resource(UserTempParams, '/users/<int:id>/user_temp_params')
 
 class UserTempParam(Resource):
     def get(self, id, param_id):
-        # get a specific temp param
+        # Get a specific temp param
         param = User_Temp_Params.query.get_or_404(param_id)
         return param.to_dict()
 
     def patch(self, id, param_id):
-        # update a temp param
+        # Update a temp param
         param = User_Temp_Params.query.get_or_404(param_id)
         param_data = request.get_json()
+        
+        # Ensure proper format for date and time fields
+        if 'date' in param_data:
+            param_data['date'] = datetime.fromisoformat(param_data['date'])
+        if 'start_time' in param_data:
+            param_data['start_time'] = time.fromisoformat(param_data['start_time'])
+        
+        if 'end_time' in param_data and param_data['end_time']:
+            param_data['end_time'] = time.fromisoformat(param_data['end_time'])
+        else:
+            param_data['end_time'] = None
         for key, value in param_data.items():
             setattr(param, key, value)
         db.session.commit()
         return param.to_dict()
 
     def delete(self, id, param_id):
-        # delete a temp param
+        # Delete a temp param
         param = User_Temp_Params.query.get_or_404(param_id)
         db.session.delete(param)
         db.session.commit()
         return '', 204
 
 api.add_resource(UserTempParam, '/users/<int:id>/user_temp_params/<int:param_id>')
-
-
-
-
-
-
-
-
-if __name__ == '__main__':
-    app.run(port=5555, debug=True)
 

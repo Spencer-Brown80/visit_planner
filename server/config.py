@@ -9,6 +9,7 @@ from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
+from datetime import timedelta
 
 #Review below imports for pipfile
 import os
@@ -23,6 +24,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False
 app.secret_key = b"Y\xf1Xz\x00\xad|eQ\x80t \xca\x1a\x10K"
 
+app.permanent_session_lifetime = timedelta(minutes=30)
+
+
 
 # Define metadata, instantiate db
 metadata = MetaData(naming_convention={
@@ -35,5 +39,11 @@ db.init_app(app)
 # Instantiate REST API
 api = Api(app)
 
+
 # Instantiate CORS
 CORS(app)
+
+
+
+if __name__ == '__main__':
+    app.run(debug=True)

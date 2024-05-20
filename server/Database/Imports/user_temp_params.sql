@@ -1,2 +1,2 @@
 INSERT INTO user_temp_params (date, start_time, is_start_mandatory, end_time, is_end_mandatory, is_endpoint, endpoint_address, endpoint_city, endpoint_state, endpoint_zip, is_shortest, is_quickest, is_highways, is_tolls, nullify_fixed, nullify_priority, user_id) VALUES
-('2024-06-01', '2024-06-01 08:00:00', true, '2024-01-01 17:00:00', true, true, '123 Main St', 'Chattanooga', 'TN', '37402', true, true, false, false, true, true, 1);
+('2024-06-01 00:00:00', '08:00:00', true, '17:00:00', true, true, '123 Main St', 'Chattanooga', 'TN', '37402', true, true, false, false, true, true, 1);

@@ -26,11 +26,6 @@
       "description": "API Routes",
       "columnId": "column-doing"
     },
-    "BTIdYI-WB4cLLnFWDfmmV": {
-      "id": "BTIdYI-WB4cLLnFWDfmmV",
-      "description": "React Routes",
-      "columnId": "column-todo"
-    },
     "vjNpnuZsXkGLbEtH-Wvwj": {
       "id": "vjNpnuZsXkGLbEtH-Wvwj",
       "description": "Pages Mockup",
@@ -59,22 +54,22 @@
     "sKuBi6XfObOGkpduZAwkt": {
       "id": "sKuBi6XfObOGkpduZAwkt",
       "description": "Client Side Routes",
-      "columnId": "column-done"
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
     },
     "NFeTJa8q5wCPkfZFCvIeS": {
       "id": "NFeTJa8q5wCPkfZFCvIeS",
       "description": "Models.py",
-      "columnId": "column-done"
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
     },
     "nvxQPcwdYH7i8-P6-fG4Q": {
       "id": "nvxQPcwdYH7i8-P6-fG4Q",
       "description": "Add Database Data",
-      "columnId": "column-done"
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
     },
     "-Aj5cXKyf89hMtvK2h9LP": {
       "id": "-Aj5cXKyf89hMtvK2h9LP",
       "description": "App.py",
-      "columnId": "column-done"
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
     },
     "4Th4xUn_ywp6OWSx85XOX": {
       "id": "4Th4xUn_ywp6OWSx85XOX",
@@ -234,7 +229,7 @@
     "UoBnfjnx3XUJGEGkzdNzs": {
       "id": "UoBnfjnx3XUJGEGkzdNzs",
       "description": "Create Database",
-      "columnId": "column-done"
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
     },
     "mDSWxcwNmgxJ7sO9bi1gi": {
       "id": "mDSWxcwNmgxJ7sO9bi1gi",
@@ -250,6 +245,16 @@
       "id": "ovQJN0nICJjDB5LO5iHde",
       "description": "Install Chakra",
       "columnId": "column-todo"
+    },
+    "4hZ_vyG8ro9tWtQDd4NsX": {
+      "id": "4hZ_vyG8ro9tWtQDd4NsX",
+      "description": "Tested API Routes",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "jokWIn8Z-8mdf3x5GXUYN": {
+      "id": "jokWIn8Z-8mdf3x5GXUYN",
+      "description": "add logged in constraints to rest of app.py",
+      "columnId": "column-xDKG7OXZnGeXvhfo0wKOu"
     }
   },
   "columns": [
@@ -258,7 +263,6 @@
       "title": "Prep",
       "tasksIds": [
         "UOE3cEos0uCHBc7eaQSix",
-        "BTIdYI-WB4cLLnFWDfmmV",
         "vjNpnuZsXkGLbEtH-Wvwj",
         "rccEWwzgjUEyVdI9sR-qB",
         "xNXo_HBtY2Cr_hiJ3pSYl",
@@ -282,11 +286,6 @@
       "id": "column-done",
       "title": "MVP Goals",
       "tasksIds": [
-        "sKuBi6XfObOGkpduZAwkt",
-        "NFeTJa8q5wCPkfZFCvIeS",
-        "-Aj5cXKyf89hMtvK2h9LP",
-        "UoBnfjnx3XUJGEGkzdNzs",
-        "nvxQPcwdYH7i8-P6-fG4Q",
         "4Th4xUn_ywp6OWSx85XOX",
         "vh2zIkxIp15wv65NkMmUo",
         "7Gg22W-uJX91i4zDyi0O9",
@@ -311,12 +310,21 @@
     {
       "id": "column-xDKG7OXZnGeXvhfo0wKOu",
       "title": "MVP - In Progress",
-      "tasksIds": []
+      "tasksIds": [
+        "jokWIn8Z-8mdf3x5GXUYN"
+      ]
     },
     {
       "id": "column-_alDnBLOUVz3WcQ1wNSy0",
       "title": "MVP - Completed",
-      "tasksIds": []
+      "tasksIds": [
+        "UoBnfjnx3XUJGEGkzdNzs",
+        "sKuBi6XfObOGkpduZAwkt",
+        "NFeTJa8q5wCPkfZFCvIeS",
+        "-Aj5cXKyf89hMtvK2h9LP",
+        "nvxQPcwdYH7i8-P6-fG4Q",
+        "4hZ_vyG8ro9tWtQDd4NsX"
+      ]
     },
     {
       "id": "column-cZAyHyRa5_1JQYN1vHK9_",
