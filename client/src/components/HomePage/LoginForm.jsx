@@ -20,16 +20,33 @@ const LoginForm = ({ onShowRegister }) => {
   });
 
   const handleSubmit = (values, { setSubmitting }) => {
-    setTimeout(() => {
-      setIsLogin(true);
-      navigate("/user/profile");
-      setSubmitting(false);
-    }, 400);
+    fetch("/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(values),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Invalid username or password");
+        }
+        return response.json();
+      })
+      .then((user_data) => {
+        setSubmitting(false);
+        setIsLogin(true);
+        navigate("/user");
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        setSubmitting(false);
+      });
   };
 
   return (
     <Center height="100vh">
-      <Box width="100%" maxW="400px" p={4} boxShadow="lg" borderRadius="md" mt={20}> {/* Add mt={20} for margin-top */}
+      <Box width="100%" maxW="400px" p={4} boxShadow="lg" borderRadius="md" mt={20}>
         <Formik
           initialValues={initialValues}
           validationSchema={validationSchema}

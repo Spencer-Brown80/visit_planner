@@ -1,14 +1,13 @@
 import { ChakraProvider } from "@chakra-ui/react";
 import { Route, Routes } from "react-router-dom";
 import HomePage from "./pages/HomePage";
-import UserMenuPage from "./pages/UserMenuPage";
-import UserClientPage from "./pages/UserClientPage";
-import UserMobilViewPage from "./pages/UserMobilViewPage";
+
 import NotFoundPage from "./pages/NotFoundPage";
 import UserContext from "./UserContext";
 import { useState } from "react";
 import NavBar from "./components/HomePage/NavBar";
-import UserProfile from "./components/UserMenuPage/Profile/UserProfile";
+import UserRoutes from "./AppRoutes/UserRoutes";
+
 
 
 function App() {
@@ -55,12 +54,8 @@ function App() {
                 </>
               }
             />
-            <Route path="/user" element={<UserMenuPage />}>
-              <Route path="profile" element={<UserProfile />} />
-            </Route>
-            <Route path="/user-clients" element={<UserClientPage />} />
-            <Route path="/user-mobil" element={<UserMobilViewPage />} />
-            <Route path="*" element={<NotFoundPage />} />
+            <Route path="/user/*" element={<UserRoutes />} />
+              <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </div>
       </UserContext.Provider>

@@ -17,7 +17,6 @@ const RegistrationForm = ({ onShowLogin }) => {
     confirmPassword: "",
     phone: "",
     email: "",
-    isAdmin: false,
   };
 
   const validationSchema = Yup.object({
@@ -33,16 +32,33 @@ const RegistrationForm = ({ onShowLogin }) => {
   });
 
   const handleSubmit = (values, { setSubmitting }) => {
-    setTimeout(() => {
-      setIsLogin(true);
-      navigate("/user/profile");
-      setSubmitting(false);
-    }, 400);
+    fetch("/api/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(values),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Registration failed");
+        }
+        return response.json();
+      })
+      .then(() => {
+        setSubmitting(false);
+        setIsLogin(true);
+        navigate("/user");
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        setSubmitting(false);
+      });
   };
 
   return (
     <Center height="100vh">
-      <Box width="100%" maxW="400px" p={4} boxShadow="lg" borderRadius="md" mt={80}> {/* Add mt={20} for margin-top */}
+      <Box width="100%" maxW="400px" p={4} boxShadow="lg" borderRadius="md" mt={20}>
         <Formik
           initialValues={initialValues}
           validationSchema={validationSchema}
@@ -93,11 +109,6 @@ const RegistrationForm = ({ onShowLogin }) => {
                   <ErrorMessage name="email" component="div" className="error" />
                 </FormControl>
 
-                <FormControl>
-                  <Field type="checkbox" name="isAdmin" />
-                  <FormLabel>Register as Admin</FormLabel>
-                </FormControl>
-
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? "Registering..." : "Register"}
                 </Button>
@@ -105,7 +116,7 @@ const RegistrationForm = ({ onShowLogin }) => {
                 <Text>
                   Already have an account?{" "}
                   <Text as="span" color="blue.500" cursor="pointer" onClick={onShowLogin}>
-                    Log in here
+                    Login Here
                   </Text>
                 </Text>
               </VStack>
@@ -118,6 +129,7 @@ const RegistrationForm = ({ onShowLogin }) => {
 };
 
 export default RegistrationForm;
+
 
 
 

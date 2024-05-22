@@ -9,6 +9,8 @@ from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
+from sqlalchemy.exc import IntegrityError
+
 
 #Review below imports for pipfile
 import os
@@ -31,31 +33,117 @@ app.permanent_session_lifetime = timedelta(minutes=30)
 def is_logged_in():
     return 'user_id' in session
 
-# User Authentication Routes
-class Login(Resource):
+
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+@app.route("/")
+def index():
+    return "<h1>Project Server</h1>"
+
+
+# Signup Routes
+class Signup(Resource):
+
     def post(self):
-        data = request.get_json()
-        user = User.query.filter_by(username=data['username']).first()
-        if user and user.password == data['password']:  # Replace with password hashing check
-            session['user_id'] = user.id
-            session.permanent = True  # Ensure the session persists
+
+        request_json = request.get_json()
+
+        first_name = request_json.get("first_name")
+        last_name = request_json.get("last_name")
+        username = request_json.get("username")
+        password = request_json.get("password")
+        phone = request_json.get("phone")
+        email = request_json.get("email")
+
+       
+
+        user = User(
+            first_name=first_name,
+            last_name=last_name,
+            username=username,
+            password=password,
+            phone=phone,
+            email=email,
+        )
+
+        try:
+
+            db.session.add(user)
+            db.session.commit()
+
+            session["user_id"] = user.id  # session is a dictionary that stores user_id
+
+            return user.to_dict(), 201
+
+        except IntegrityError:
+
+            return {"error": "422 Unprocessable Entity"}, 422
+
+
+api.add_resource(Signup, "/signup", endpoint="signup")
+
+
+# CheckSession Routes
+class CheckSession(Resource):
+
+    def get(self):
+
+        user_id = session["user_id"]
+        if user_id:
+            user = User.query.filter(User.id == user_id).first()
             return user.to_dict(), 200
-        return {'error': 'Unauthorized'}, 401
 
-class Logout(Resource):
+        return {}, 401
+
+
+api.add_resource(CheckSession, "/check_session", endpoint="check_session")
+
+
+# Login Routes
+class Login(Resource):
+
     def post(self):
-        session.pop('user_id', None)
-        return {'message': 'Logged out'}, 200
 
-api.add_resource(Login, '/login')
-api.add_resource(Logout, '/logout')
+        request_json = request.get_json()
 
-# Example route requiring login
-@app.route('/protected')
-def protected():
-    if not is_logged_in():
-        return {'error': 'Unauthorized'}, 401
-    return {'message': 'This is a protected route'}, 200
+        username = request_json.get("username")
+        password = request_json.get("password")
+
+        user = User.query.filter(User.username == username).first()
+        print (username)
+        print (password)
+        if user:
+            if user.password == password:
+
+                session["user_id"] = (
+                    user.id
+                )  # session is a dictionary that stores user_id
+                return user.to_dict(), 200
+
+        return {"error": "401 Unauthorized"}, 401
+
+
+api.add_resource(Login, "/login", endpoint="login")
+
+
+
+
+# Logout Routes
+class Logout(Resource):
+
+    def delete(self):
+
+        if session.get("user_id"):
+
+            session["user_id"] = None
+            return {}, 204
+
+        return {}, 401
+
+
+api.add_resource(Logout, "/logout", endpoint="logout")
+
+
 
 
 
@@ -67,8 +155,8 @@ def protected():
 # User Events Routes
 class UserEvents(Resource):
     def get(self, id):
-        if not is_logged_in() or session['user_id'] != id:
-            return {'error': 'Forbidden'}, 403
+        # if not is_logged_in() or session['user_id'] != id:
+        #     return {'error': 'Forbidden'}, 403
 
         user = User.query.get_or_404(id)
         events = [event.to_dict() for event in user.events]
@@ -815,4 +903,7 @@ class UserTempParam(Resource):
         return '', 204
 
 api.add_resource(UserTempParam, '/users/<int:id>/user_temp_params/<int:param_id>')
+
+if __name__ == "__main__":
+    app.run(port=5000, debug=True)
 
