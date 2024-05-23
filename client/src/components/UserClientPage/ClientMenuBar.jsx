@@ -2,7 +2,7 @@ import { Box, Button, HStack, VStack, Text } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
 import LogoutForm from '/src/components/UserMenuPage/Logout/LogoutForm'; // Adjust the path as necessary
 
-const UserMenuBar = () => {
+const ClientMenuBar = () => {
   return (
     <Box
       position="fixed"
@@ -25,27 +25,20 @@ const UserMenuBar = () => {
           VisitMe
         </Text>
         <HStack justifyContent="flex-start" spacing={4}>
-          <Button as={NavLink} to="calendar" colorScheme="teal">
+          <Button as={NavLink} to="user_client_calendar" colorScheme="teal">
             Calendar
           </Button>
-          <Button as={NavLink} to="clients" colorScheme="teal">
-            Clients
-          </Button>
-          <Button as={NavLink} to="notes" colorScheme="teal">
-            Notes
-          </Button>
-          <Button as={NavLink} to="notifications" colorScheme="teal">
-            Notifications
-          </Button>
-          <Button as={NavLink} to="profile" colorScheme="teal">
+          <Button as={NavLink} to="user_client" colorScheme="teal">
             Profile
           </Button>
-          <Button as={NavLink} to="reports" colorScheme="teal">
-            Reports
+          <Button as={NavLink} to="user_client_notes" colorScheme="teal">
+            Notes
           </Button>
-          <Button as={NavLink} to="routes" colorScheme="teal">
-            Routes
+          <Button as={NavLink} to="user_client_contacts" colorScheme="teal">
+            Contacts
           </Button>
+          
+          
           <LogoutForm />
         </HStack>
       </VStack>
@@ -53,6 +46,4 @@ const UserMenuBar = () => {
   );
 };
 
-export default UserMenuBar;
-
-
+export default ClientMenuBar;

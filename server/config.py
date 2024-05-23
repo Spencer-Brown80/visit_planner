@@ -17,6 +17,8 @@ DATABASE = os.environ.get("DB_URI", f"sqlite:///{os.path.join(BASE_DIR, 'app.db'
 
 # Instantiate app, set attributes
 app = Flask(__name__)
+# Instantiate CORS
+CORS(app, resources={r"/*": {"origins": "*"}})
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False
@@ -24,8 +26,7 @@ app.secret_key = b"Y\xf1Xz\x00\xad|eQ\x80t \xca\x1a\x10K"
 
 app.permanent_session_lifetime = timedelta(minutes=30)
 
-# Instantiate CORS
-CORS(app, resources={r"/*": {"origins": "*"}})
+
 # Define metadata, instantiate db
 metadata = MetaData(naming_convention={
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",

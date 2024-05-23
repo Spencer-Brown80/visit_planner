@@ -1,6 +1,16 @@
-import React from "react";
+import React, { createContext, useState } from "react";
 
-// Use the UserContext to store the user's login status
-const UserContext = React.createContext();
+const UserContext = createContext();
 
-export default UserContext;
+const UserProvider = ({ children }) => {
+  const [isLogin, setIsLogin] = useState(false);
+  const [userId, setUserId] = useState(null); // Add userId state
+  console.log(userId)
+  return (
+    <UserContext.Provider value={{ isLogin, setIsLogin, userId, setUserId }}>
+      {children}
+    </UserContext.Provider>
+  );
+};
+
+export { UserContext, UserProvider };

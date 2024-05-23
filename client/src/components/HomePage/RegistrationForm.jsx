@@ -2,7 +2,7 @@ import React, { useContext } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Center } from "@chakra-ui/react";
-import UserContext from "../../UserContext";
+import { UserContext } from "../../UserContext";
 import { useNavigate } from "react-router-dom";
 
 const RegistrationForm = ({ onShowLogin }) => {

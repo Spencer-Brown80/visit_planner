@@ -2,11 +2,11 @@ import React, { useContext } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { Box, Button, FormControl, FormLabel, Input, VStack, Text, Center } from "@chakra-ui/react";
-import UserContext from "../../UserContext";
+import { UserContext } from "/src/UserContext";
 import { useNavigate } from "react-router-dom";
 
 const LoginForm = ({ onShowRegister }) => {
-  const { setIsLogin } = useContext(UserContext);
+  const { setIsLogin, setUserId } = useContext(UserContext);
   const navigate = useNavigate();
 
   const initialValues = {
@@ -20,7 +20,7 @@ const LoginForm = ({ onShowRegister }) => {
   });
 
   const handleSubmit = (values, { setSubmitting }) => {
-    fetch("/api/login", {
+    fetch("http://localhost:5000/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -36,7 +36,8 @@ const LoginForm = ({ onShowRegister }) => {
       .then((user_data) => {
         setSubmitting(false);
         setIsLogin(true);
-        navigate("/user");
+        setUserId(user_data.id);  // Set userId in context
+        navigate(`/usermenu/${user_data.id}`);
       })
       .catch((error) => {
         console.error("Error:", error);

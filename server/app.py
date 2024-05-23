@@ -154,14 +154,20 @@ api.add_resource(Logout, "/logout", endpoint="logout")
 # User Events Routes
 # User Events Routes
 class UserEvents(Resource):
-    def get(self, id):
-        # if not is_logged_in() or session['user_id'] != id:
-        #     return {'error': 'Forbidden'}, 403
+    def get(self, user_id):
+        try:
+            user = User.query.get_or_404(user_id)
+            events = Event.query.filter_by(user_id=user.id).all()
+            events_with_clients = []
 
-        user = User.query.get_or_404(id)
-        events = [event.to_dict() for event in user.events]
-        return jsonify(events)
-    
+            for event in events:
+                event_data = event.to_dict()
+                events_with_clients.append(event_data)
+
+            return jsonify(events_with_clients)
+        except Exception as e:
+            app.logger.error(f"Error fetching events for user {user_id}: {str(e)}")
+            return {"error": str(e)}, 500
     
      
         
@@ -174,10 +180,10 @@ class UserEvents(Resource):
         event_data = request.get_json()
 
         # Ensure proper format for start_time and date
-        if 'start_time' in event_data:
-            event_data['start_time'] = time.fromisoformat(event_data['start_time'])
-        if 'date' in event_data:
-            event_data['date'] = datetime.fromisoformat(event_data['date'])
+        if 'start' in event_data:
+            event_data['start'] = datetime.fromisoformat(event_data['start'])
+        if 'end' in event_data:
+            event_data['end'] = datetime.fromisoformat(event_data['end'])
         # Convert date_created to datetime if provided
         if 'date_created' in event_data:
             event_data['date_created'] = datetime.fromisoformat(event_data['date_created'])
@@ -187,7 +193,7 @@ class UserEvents(Resource):
         db.session.commit()
         return event.to_dict(), 201
 
-api.add_resource(UserEvents, '/users/<int:id>/events')
+api.add_resource(UserEvents, '/users/<int:user_id>/events')
 
 class UserEvent(Resource):
     def get(self, id, event_id):
@@ -205,10 +211,10 @@ class UserEvent(Resource):
         event_data = request.get_json()
 
         # Ensure proper format for start_time and date
-        if 'start_time' in event_data:
-            event_data['start_time'] = time.fromisoformat(event_data['start_time'])
-        if 'date' in event_data:
-            event_data['date'] = datetime.fromisoformat(event_data['date'])
+        if 'start' in event_data:
+            event_data['start'] = datetime.fromisoformat(event_data['start'])
+        if 'end' in event_data:
+            event_data['end'] = datetime.fromisoformat(event_data['end'])
         # Convert date_created to datetime if provided
         if 'date_created' in event_data:
             event_data['date_created'] = datetime.fromisoformat(event_data['date_created'])
@@ -247,10 +253,10 @@ class UserClientEvents(Resource):
         event_data = request.get_json()
 
         # Ensure proper format for start_time and date
-        if 'start_time' in event_data:
-            event_data['start_time'] = time.fromisoformat(event_data['start_time'])
-        if 'date' in event_data:
-            event_data['date'] = datetime.fromisoformat(event_data['date'])
+        if 'start' in event_data:
+            event_data['start'] = datetime.fromisoformat(event_data['start'])
+        if 'end' in event_data:
+            event_data['end'] = datetime.fromisoformat(event_data['end'])
         # Convert date_created to datetime if provided
         if 'date_created' in event_data:
             event_data['date_created'] = datetime.fromisoformat(event_data['date_created'])
@@ -284,10 +290,10 @@ class UserClientEvent(Resource):
         event_data = request.get_json()
 
         # Ensure proper format for start_time and date
-        if 'start_time' in event_data:
-            event_data['start_time'] = time.fromisoformat(event_data['start_time'])
-        if 'date' in event_data:
-            event_data['date'] = datetime.fromisoformat(event_data['date'])
+        if 'start' in event_data:
+            event_data['start'] = datetime.fromisoformat(event_data['start'])
+        if 'end' in event_data:
+            event_data['end'] = datetime.fromisoformat(event_data['end'])
         # Convert date_created to datetime if provided
         if 'date_created' in event_data:
             event_data['date_created'] = datetime.fromisoformat(event_data['date_created'])
@@ -904,6 +910,5 @@ class UserTempParam(Resource):
 
 api.add_resource(UserTempParam, '/users/<int:id>/user_temp_params/<int:param_id>')
 
-if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+
 

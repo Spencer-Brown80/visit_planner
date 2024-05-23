@@ -71,6 +71,8 @@ class User(db.Model, SerializerMixin):
         return user_dict
     
     
+    
+    
 
     # Validations
     @validates("first_name", "last_name", "address", "city", "state", "zip", "password")
@@ -218,9 +220,8 @@ class Event(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True, unique=True)
     type = db.Column(db.Integer, nullable=False)
     status = db.Column(db.Integer, nullable=False)
-    date = db.Column(db.DateTime, nullable=False, index=True)
-    start_time = db.Column(db.Time, nullable=False)
-    duration = db.Column(db.Integer, nullable=False)
+    start = db.Column(db.DateTime, nullable=False, index=True)
+    end = db.Column(db.DateTime, nullable=False)
     is_fixed = db.Column(db.Boolean, nullable=False)
     priority = db.Column(db.Integer, nullable=True)
     is_recurring = db.Column(db.Boolean, nullable=False)
@@ -238,6 +239,7 @@ class Event(db.Model, SerializerMixin):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     user_client_id = db.Column(db.Integer, db.ForeignKey("user_clients.id"), nullable=True)
 
+    
     # Relationships
     user = db.relationship("User", back_populates="events")
     user_client = db.relationship("User_Client", back_populates="events")
@@ -245,29 +247,27 @@ class Event(db.Model, SerializerMixin):
     instances = db.relationship("EventInstance", back_populates="event", cascade="all, delete-orphan")
 
     # Serialization rules
-    serialize_only = ('id', 'type', 'status', 'date', 'start_time', 'duration', 'is_fixed', 'priority', 'is_recurring', 'recurrence_rule', 'notify_client', 'notes', 'is_completed', 'is_endpoint', 'address', 'city', 'state', 'zip', 'date_created')
+    serialize_only = ('id', 'type', 'status', 'start', 'end', 'is_fixed', 'priority', 'is_recurring', 'recurrence_rule', 'notify_client', 'notes', 'is_completed', 'is_endpoint', 'address', 'city', 'state', 'zip', 'date_created')
+    serialize_rules = ("-user.events", "-instances", "-notifications.event")
 
-    #serialize_rules = ("-user.events", "-user_client.events", "-instances", "-notifications.event")
-    
-    
     def to_dict(self):
         event_dict = super().to_dict()
-        event_dict['date'] = self.date.isoformat() 
-        event_dict['start_time'] = self.start_time.isoformat() 
+        event_dict['start'] = self.start.isoformat() 
+        event_dict['end'] = self.end.isoformat() 
         event_dict['date_created'] = self.date_created.isoformat() 
+        if self.user_client:
+            event_dict['client_name'] = f"{self.user_client.first_name} {self.user_client.last_name}"
+        else:
+            event_dict['client_name'] = "No Client"
         return event_dict
 
-    # Validations
-    @validates('date')
-    def validate_date(self, key, date):
-        if not isinstance(date, datetime):
-            raise ValueError("Date must be a valid datetime object")
-        return date
 
-    @validates('start_time')
+    # Validations
+    
+    @validates('start', 'end')
     def validate_start_time_format(self, key, start_time):
         if not isinstance(start_time, time):
-            raise ValueError("Start time must be a valid time object")
+            raise ValueError("Start/End time must be a valid time object")
         return start_time
 
     @validates('type')
@@ -281,14 +281,14 @@ class Event(db.Model, SerializerMixin):
         return value
 
 # Define EventInstance class
+# Define EventInstance class
 class EventInstance(db.Model, SerializerMixin):
     __tablename__ = "event_instances"
 
     id = db.Column(db.Integer, primary_key=True)
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), nullable=False)
-    instance_date = db.Column(db.DateTime, nullable=False)
-    start_time = db.Column(db.Time, nullable=False)
-    duration = db.Column(db.Integer, nullable=False)
+    instance_start = db.Column(db.DateTime, nullable=False)
+    instance_end = db.Column(db.DateTime, nullable=False)
     modified = db.Column(db.Boolean, default=False)
 
     # Relationships
@@ -296,34 +296,29 @@ class EventInstance(db.Model, SerializerMixin):
     exceptions = db.relationship("EventException", back_populates="event_instance", cascade="all, delete-orphan")
 
     # Serialization rules
-    serialize_only = ('id', 'event_id', 'instance_date', 'start_time', 'duration', 'modified')
+    serialize_only = ('id', 'event_id', 'instance_date', 'start', 'end', 'modified')
     serialize_rules = ("-event.instances", "-exceptions.event_instance")
     
     def to_dict(self):
         instance_dict = super().to_dict()
-        instance_dict['instance_date'] = serialize_datetime(self.instance_date)
-        instance_dict['start_time'] = serialize_time(self.start_time)
+        instance_dict['instance_start'] = serialize_datetime(self.instance_start)
+        instance_dict['instance_end'] = serialize_datetime(self.isntance_end)
         return instance_dict
     
     # Validations
-    @validates('instance_date')
-    def validate_instance_date(self, key, instance_date):
-        if not isinstance(instance_date, datetime):
+    @validates('instance_start')
+    def validate_instance_start(self, key, instance_start):
+        if not isinstance(instance_start, datetime):
             raise ValueError("Instance date must be a valid datetime object")
-        return instance_date
+        return instance_start
 
-    @validates('start_time')
-    def validate_start_time_format(self, key, start_time):
-        if not isinstance(start_time, time):
-            raise ValueError("Start time must be a valid time object")
-        return start_time
-
-    @validates('duration')
-    def validate_duration(self, key, duration):
-        if not isinstance(duration, int) or duration <= 0:
-            raise ValueError("Duration must be a positive integer")
-        return duration
-
+    @validates('instance_end')
+    def validate_instance_start(self, key, instance_end):
+        if not isinstance(instance_end, datetime):
+            raise ValueError("Instance date must be a valid datetime object")
+        return instance_end
+    
+    
 # Define EventException class    
 class EventException(db.Model, SerializerMixin):
     __tablename__ = "event_exceptions"
