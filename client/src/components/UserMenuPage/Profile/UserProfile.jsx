@@ -64,7 +64,7 @@ const UserProfile = () => {
 
   return (
     <Box p="4">
-      <Text fontSize="xl">User Profile</Text>
+      <Text fontSize="xl"></Text>
       <Formik
         initialValues={initialValues}
         validationSchema={validationSchema}

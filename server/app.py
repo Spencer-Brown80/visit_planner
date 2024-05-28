@@ -15,6 +15,8 @@ from sqlalchemy.exc import IntegrityError
 #Review below imports for pipfile
 import os
 from datetime import datetime, timedelta, time
+from dateutil.rrule import rrulestr
+
 
 
 
@@ -39,6 +41,15 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 @app.route("/")
 def index():
     return "<h1>Project Server</h1>"
+
+
+
+
+
+
+
+
+
 
 
 # Signup Routes
@@ -151,103 +162,195 @@ api.add_resource(Logout, "/logout", endpoint="logout")
 
 
 
-# User Events Routes
-# User Events Routes
+
+# Find overlapping events
+def find_overlapping_events(event, all_events):
+    overlapping_events = []
+    for e in all_events:
+        if e.id != event.id and e.start < event.end and e.end > event.start:
+            overlapping_events.append(e)
+    return overlapping_events
+
 class UserEvents(Resource):
     def get(self, user_id):
         try:
             user = User.query.get_or_404(user_id)
-            events = Event.query.filter_by(user_id=user.id).all()
-            events_with_clients = []
+            date_str = request.args.get('date')
+            if date_str:
+                date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                events = Event.query.filter_by(user_id=user.id).filter(
+                    Event.start >= datetime.combine(date, datetime.min.time()),
+                    Event.start < datetime.combine(date, datetime.max.time())
+                ).all()
+            else:
+                events = Event.query.filter_by(user_id=user.id).all()
 
-            for event in events:
-                event_data = event.to_dict()
-                events_with_clients.append(event_data)
-
+            events_with_clients = [event.to_dict() for event in events]
             return jsonify(events_with_clients)
         except Exception as e:
             app.logger.error(f"Error fetching events for user {user_id}: {str(e)}")
             return {"error": str(e)}, 500
-    
-     
-        
 
-    def post(self, id):
-        if not is_logged_in() or session['user_id'] != id:
-            return {'error': 'Forbidden'}, 403
-
-        user = User.query.get_or_404(id)
-        event_data = request.get_json()
-
-        # Ensure proper format for start_time and date
-        if 'start' in event_data:
-            event_data['start'] = datetime.fromisoformat(event_data['start'])
-        if 'end' in event_data:
-            event_data['end'] = datetime.fromisoformat(event_data['end'])
-        # Convert date_created to datetime if provided
-        if 'date_created' in event_data:
-            event_data['date_created'] = datetime.fromisoformat(event_data['date_created'])
-
-        event = Event(user_id=user.id, **event_data)
+    def post(self, user_id):
+        data = request.get_json()
+        event = Event(
+            type=data['type'],
+            status=data['status'],
+            start=datetime.fromisoformat(data['start']),
+            end=datetime.fromisoformat(data['end']),
+            is_fixed=data['is_fixed'],
+            priority=data['priority'],
+            is_recurring=data['is_recurring'],
+            recurrence_rule=data['recurrence_rule'],
+            notify_client=data['notify_client'],
+            notes=data['notes'],
+            is_completed=data['is_completed'],
+            is_endpoint=data['is_endpoint'],
+            address=data['address'],
+            city=data['city'],
+            state=data['state'],
+            zip=data['zip'],
+            user_id=user_id,
+            user_client_id=data['user_client_id']
+        )
         db.session.add(event)
         db.session.commit()
-        return event.to_dict(), 201
+
+        if event.is_recurring and event.recurrence_rule:
+            recurring_events = generate_recurring_events(event)
+            for recurring_event_data in recurring_events:
+                recurring_event = Event(**recurring_event_data)
+                db.session.add(recurring_event)
+            db.session.commit()
+
+        return (event.to_dict()), 201
+
+def generate_recurring_events(event):
+    max_end_date = event.start + timedelta(days=180)
+    rule = rrulestr(event.recurrence_rule, dtstart=event.start)
+    occurrences = rule.between(event.start, max_end_date, inc=True)  # Generate all occurrences
+
+    recurring_events = []
+    for occurrence in occurrences:
+        if occurrence > event.start:
+            recurring_event = {
+                'start': occurrence,
+                'end': occurrence + (event.end - event.start),  # Adjust end time
+                'type': event.type,
+                'status': event.status,
+                'is_fixed': event.is_fixed,
+                'priority': event.priority,
+                'is_recurring': False,  # Each generated event is not recurring itself
+                'recurrence_rule': event.recurrence_rule,  # Include the recurrence rule
+
+                'notify_client': event.notify_client,
+                'notes': event.notes,
+                'is_completed': event.is_completed,
+                'is_endpoint': event.is_endpoint,
+                'address': event.address,
+                'city': event.city,
+                'state': event.state,
+                'zip': event.zip,
+                'user_id': event.user_id,
+                'user_client_id': event.user_client_id,
+                'parent_event_id': event.id  # Link to the original event
+            }
+            recurring_events.append(recurring_event)
+    return recurring_events
 
 api.add_resource(UserEvents, '/users/<int:user_id>/events')
 
 class UserEvent(Resource):
     def get(self, id, event_id):
-        if not is_logged_in() or session['user_id'] != id:
-            return {'error': 'Forbidden'}, 403
-
         event = Event.query.get_or_404(event_id)
-        return event.to_dict()
+        return jsonify(event.to_dict())
 
     def patch(self, id, event_id):
-        if not is_logged_in() or session['user_id'] != id:
-            return {'error': 'Forbidden'}, 403
-
+        data = request.get_json()
         event = Event.query.get_or_404(event_id)
-        event_data = request.get_json()
+        
+        update_series = data.get('update_series', False)
+        ignore_conflicts = data.get('ignore_conflicts', True)
+        
+        if not ignore_conflicts:
+            all_events = Event.query.filter_by(user_id=event.user_id).all()
+            conflicting_events = find_overlapping_events(event, all_events)
+            if conflicting_events:
+                return ({
+                    'error': 'conflict',
+                    'conflicts': [e.to_dict() for e in conflicting_events]
+                }), 409
 
-        # Ensure proper format for start_time and date
-        if 'start' in event_data:
-            event_data['start'] = datetime.fromisoformat(event_data['start'])
-        if 'end' in event_data:
-            event_data['end'] = datetime.fromisoformat(event_data['end'])
-        # Convert date_created to datetime if provided
-        if 'date_created' in event_data:
-            event_data['date_created'] = datetime.fromisoformat(event_data['date_created'])
-
-        for key, value in event_data.items():
-            setattr(event, key, value)
+        if update_series:
+            events_to_update = Event.query.filter(Event.parent_event_id == event.parent_event_id, Event.start >= event.start).all()
+            for e in events_to_update:
+                e.type = data.get('type', e.type)
+                e.status = data.get('status', e.status)
+                e.start = datetime.fromisoformat(data.get('start', e.start.isoformat()))
+                e.end = datetime.fromisoformat(data.get('end', e.end.isoformat()))
+                e.is_fixed = data.get('is_fixed', e.is_fixed)
+                e.priority = data.get('priority', e.priority)
+                e.is_recurring = data.get('is_recurring', e.is_recurring)
+                e.recurrence_rule = data.get('recurrence_rule', e.recurrence_rule)
+                e.notify_client = data.get('notify_client', e.notify_client)
+                e.notes = data.get('notes', e.notes)
+                e.is_completed = data.get('is_completed', e.is_completed)
+                e.is_endpoint = data.get('is_endpoint', e.is_endpoint)
+                e.address = data.get('address', e.address)
+                e.city = data.get('city', e.city)
+                e.state = data.get('state', e.state)
+                e.zip = data.get('zip', e.zip)
+                e.user_client_id = data.get('user_client_id', e.user_client_id)
+        else:
+            event.type = data.get('type', event.type)
+            event.status = data.get('status', event.status)
+            event.start = datetime.fromisoformat(data.get('start', event.start.isoformat()))
+            event.end = datetime.fromisoformat(data.get('end', event.end.isoformat()))
+            event.is_fixed = data.get('is_fixed', event.is_fixed)
+            event.priority = data.get('priority', event.priority)
+            event.is_recurring = data.get('is_recurring', event.is_recurring)
+            event.recurrence_rule = data.get('recurrence_rule', event.recurrence_rule)
+            event.notify_client = data.get('notify_client', event.notify_client)
+            event.notes = data.get('notes', event.notes)
+            event.is_completed = data.get('is_completed', event.is_completed)
+            event.is_endpoint = data.get('is_endpoint', event.is_endpoint)
+            event.address = data.get('address', event.address)
+            event.city = data.get('city', event.city)
+            event.state = data.get('state', event.state)
+            event.zip = data.get('zip', event.zip)
+            event.user_client_id = data.get('user_client_id', event.user_client_id)
+        
         db.session.commit()
-        return event.to_dict()
+        return '', 200
 
     def delete(self, id, event_id):
-        if not is_logged_in() or session['user_id'] != id:
-            return {'error': 'Forbidden'}, 403
-
         event = Event.query.get_or_404(event_id)
         db.session.delete(event)
         db.session.commit()
         return '', 204
+
+def find_overlapping_events(event, all_events):
+    overlapping_events = []
+    for e in all_events:
+        if e.id != event.id and e.start < event.end and e.end > event.start:
+            overlapping_events.append(e)
+    return overlapping_events
 
 api.add_resource(UserEvent, '/users/<int:id>/events/<int:event_id>')
 
 
 class UserClientEvents(Resource):
     def get(self, id):
-        if not is_logged_in() or session['user_id'] != id:
-            return {'error': 'Forbidden'}, 403
+        # if not is_logged_in() or session['user_id'] != id:
+        #     return {'error': 'Forbidden'}, 403
 
         user_client = User.query.get_or_404(id)
         events = [event.to_dict() for event in user_client.events]
         return jsonify(events)
     
     def post(self, id):
-        if not is_logged_in() or session['user_id'] != id:
-            return {'error': 'Forbidden'}, 403
+        # if not is_logged_in() or session['user_id'] != id:
+        #     return {'error': 'Forbidden'}, 403
 
         user_client = User.query.get_or_404(id)
         event_data = request.get_json()
@@ -275,16 +378,16 @@ api.add_resource(UserClientEvents, '/user_clients/<int:id>/events')
 class UserClientEvent(Resource):
     def get(self, id, event_id):
         # show single client event
-        if not is_logged_in() or session['user_id'] != id:
-            return {'error': 'Forbidden'}, 403
+        # if not is_logged_in() or session['user_id'] != id:
+        #     return {'error': 'Forbidden'}, 403
 
         event = Event.query.get_or_404(event_id)
         return event.to_dict()
 
     def patch(self, id, event_id):
         # update a single client event
-        if not is_logged_in() or session['user_id'] != id:
-            return {'error': 'Forbidden'}, 403
+        # if not is_logged_in() or session['user_id'] != id:
+        #     return {'error': 'Forbidden'}, 403
 
         event = Event.query.get_or_404(event_id)
         event_data = request.get_json()
@@ -305,8 +408,8 @@ class UserClientEvent(Resource):
 
     def delete(self, id, event_id):
         # delete a single client event
-        if not is_logged_in() or session['user_id'] != id:
-            return {'error': 'Forbidden'}, 403
+        # if not is_logged_in() or session['user_id'] != id:
+        #     return {'error': 'Forbidden'}, 403
 
         event = Event.query.get_or_404(event_id)
         db.session.delete(event)
@@ -319,14 +422,14 @@ api.add_resource(UserClientEvent, '/user_clients/<int:id>/events/<int:event_id>'
 # EventInstances: Handles operations related to all instances of a specific event.
 class EventInstances(Resource):
     def get(self, event_id):
-        if not is_logged_in() or session['user_id'] != id:
-            return {'error': 'Forbidden'}, 403
+        # if not is_logged_in() or session['user_id'] != id:
+        #     return {'error': 'Forbidden'}, 403
         event = Event.query.get_or_404(event_id)
         return jsonify([instance.to_dict() for instance in event.instances])
 
     def post(self, event_id):
-        if not is_logged_in() or session['user_id'] != id:
-            return {'error': 'Forbidden'}, 403
+        # if not is_logged_in() or session['user_id'] != id:
+        #     return {'error': 'Forbidden'}, 403
         event = Event.query.get_or_404(event_id)
         instance_data = request.get_json()
         

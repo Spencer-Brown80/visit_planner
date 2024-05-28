@@ -1,0 +1,354 @@
+{
+  "scope": "Workspace",
+  "tasks": {
+    "task-cSr80R0Q4GEmaqdDBwWxI": {
+      "id": "task-cSr80R0Q4GEmaqdDBwWxI",
+      "description": "Create Github repo",
+      "columnId": "column-doing"
+    },
+    "UOE3cEos0uCHBc7eaQSix": {
+      "id": "UOE3cEos0uCHBc7eaQSix",
+      "description": "Complete Readme",
+      "columnId": "column-todo"
+    },
+    "wMh9aa-FZ_4YHbvrMqNoW": {
+      "id": "wMh9aa-FZ_4YHbvrMqNoW",
+      "description": "Database Schema",
+      "columnId": "column-doing"
+    },
+    "f_QSYmrzMonYWx6uZCq0z": {
+      "id": "f_QSYmrzMonYWx6uZCq0z",
+      "description": "Component Tree",
+      "columnId": "column-doing"
+    },
+    "iBDAiUlHUTsxXQMvdxGOV": {
+      "id": "iBDAiUlHUTsxXQMvdxGOV",
+      "description": "API Routes",
+      "columnId": "column-doing"
+    },
+    "vjNpnuZsXkGLbEtH-Wvwj": {
+      "id": "vjNpnuZsXkGLbEtH-Wvwj",
+      "description": "Pages Mockup",
+      "columnId": "column-todo"
+    },
+    "rccEWwzgjUEyVdI9sR-qB": {
+      "id": "rccEWwzgjUEyVdI9sR-qB",
+      "description": "Reponse Structure Examples",
+      "columnId": "column-todo"
+    },
+    "XyLp0PiYutXI6ldZtyvzV": {
+      "id": "XyLp0PiYutXI6ldZtyvzV",
+      "description": "Intitialize Server/Client",
+      "columnId": "column-doing"
+    },
+    "-M3-yaETEvTlUJX-FHxfz": {
+      "id": "-M3-yaETEvTlUJX-FHxfz",
+      "description": "Install Vite",
+      "columnId": "column-doing"
+    },
+    "qFGreIH7_7p2C8b-02YhE": {
+      "id": "qFGreIH7_7p2C8b-02YhE",
+      "description": "Create Trello Board",
+      "columnId": "column-doing"
+    },
+    "sKuBi6XfObOGkpduZAwkt": {
+      "id": "sKuBi6XfObOGkpduZAwkt",
+      "description": "Client Side Routes",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "NFeTJa8q5wCPkfZFCvIeS": {
+      "id": "NFeTJa8q5wCPkfZFCvIeS",
+      "description": "Models.py",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "nvxQPcwdYH7i8-P6-fG4Q": {
+      "id": "nvxQPcwdYH7i8-P6-fG4Q",
+      "description": "Add Database Data",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "-Aj5cXKyf89hMtvK2h9LP": {
+      "id": "-Aj5cXKyf89hMtvK2h9LP",
+      "description": "App.py",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "4Th4xUn_ywp6OWSx85XOX": {
+      "id": "4Th4xUn_ywp6OWSx85XOX",
+      "description": "Home Page",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "7Gg22W-uJX91i4zDyi0O9": {
+      "id": "7Gg22W-uJX91i4zDyi0O9",
+      "description": "Login Page",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "fo7MPtL_mQZJJEDYTzNhO": {
+      "id": "fo7MPtL_mQZJJEDYTzNhO",
+      "description": "Registration Page",
+      "columnId": "column-xDKG7OXZnGeXvhfo0wKOu"
+    },
+    "vh2zIkxIp15wv65NkMmUo": {
+      "id": "vh2zIkxIp15wv65NkMmUo",
+      "description": "Navbar",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "Ud9_wTcLnlptNRDuvICsf": {
+      "id": "Ud9_wTcLnlptNRDuvICsf",
+      "description": "About Page",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "MIdwlCf_Xiv05Z8Dd43g2": {
+      "id": "MIdwlCf_Xiv05Z8Dd43g2",
+      "description": "User Menu Page",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "26B85gEp7P97EcsyyuE3F": {
+      "id": "26B85gEp7P97EcsyyuE3F",
+      "description": "User Calendar Page",
+      "columnId": "column-done"
+    },
+    "0EJh_Jza96HqIxL8zlugg": {
+      "id": "0EJh_Jza96HqIxL8zlugg",
+      "description": "User Monthly View Page",
+      "columnId": "column-done"
+    },
+    "KYMebvkgnD6b5SW0N839_": {
+      "id": "KYMebvkgnD6b5SW0N839_",
+      "description": "User Profile Page",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "qRXNCrJi20L84Qdp04R5w": {
+      "id": "qRXNCrJi20L84Qdp04R5w",
+      "description": "User Notes Page",
+      "columnId": "column-done"
+    },
+    "PssBPiMGx4dbxt9rd95k6": {
+      "id": "PssBPiMGx4dbxt9rd95k6",
+      "description": "Client List Page",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "rRgz0mjHFQioeSbQD2NHN": {
+      "id": "rRgz0mjHFQioeSbQD2NHN",
+      "description": "Client Page",
+      "columnId": "column-done"
+    },
+    "Sc2aUpDEJ9Kw97T178qBx": {
+      "id": "Sc2aUpDEJ9Kw97T178qBx",
+      "description": "Client Monthly View Page",
+      "columnId": "column-done"
+    },
+    "VRI0-vchpMjYaVw5HAYHg": {
+      "id": "VRI0-vchpMjYaVw5HAYHg",
+      "description": "Client Profile Page",
+      "columnId": "column-done"
+    },
+    "KEaC49cO0zE1FRWVtSW8S": {
+      "id": "KEaC49cO0zE1FRWVtSW8S",
+      "description": "Client Notes Page",
+      "columnId": "column-done"
+    },
+    "Nuq_DxX3N7tI1ZyjtOzkO": {
+      "id": "Nuq_DxX3N7tI1ZyjtOzkO",
+      "description": "Client Contacts Page",
+      "columnId": "column-done"
+    },
+    "cT_9PApFvpMdSM5Q62RDC": {
+      "id": "cT_9PApFvpMdSM5Q62RDC",
+      "description": "Routes Page",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "Lv6EBg3A5_82xlEVrz58N": {
+      "id": "Lv6EBg3A5_82xlEVrz58N",
+      "description": "Reports Page",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "0a0wCiiRgk6ats8Cw1PGw": {
+      "id": "0a0wCiiRgk6ats8Cw1PGw",
+      "description": "Event Form",
+      "columnId": "column-xDKG7OXZnGeXvhfo0wKOu"
+    },
+    "bvvtxGOQ_BFvxVmtm-ywf": {
+      "id": "bvvtxGOQ_BFvxVmtm-ywf",
+      "description": "Geolocation",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "4gMIbQBAUXRlx8CcKxgly": {
+      "id": "4gMIbQBAUXRlx8CcKxgly",
+      "description": "Dynamic Routing using Google Maps API",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "2uNoae0nK-91k2H2PNPLA": {
+      "id": "2uNoae0nK-91k2H2PNPLA",
+      "description": "Text/email notifications",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "sHeY1BjzqXAOMAvyFnBWk": {
+      "id": "sHeY1BjzqXAOMAvyFnBWk",
+      "description": "Add and save temporary travel parameters to a date and recalculate route.",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "AELazRfRTyLzRKRnUVDhQ": {
+      "id": "AELazRfRTyLzRKRnUVDhQ",
+      "description": "Recalculate route at any point during day.   ",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "N4ze7fA6r9PbIa7w9Kjtx": {
+      "id": "N4ze7fA6r9PbIa7w9Kjtx",
+      "description": "Create functioning mileage and visit reports for a given period.  ",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "xmf9eOgJioBMsHqqaAx8u": {
+      "id": "xmf9eOgJioBMsHqqaAx8u",
+      "description": "User Parameters Component",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "PSR0IExdPZe7oPViXJ-EG": {
+      "id": "PSR0IExdPZe7oPViXJ-EG",
+      "description": "User Notifications Component",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "GKYvQEiPquVwQffhHF48y": {
+      "id": "GKYvQEiPquVwQffhHF48y",
+      "description": "User Temp Parameters Component",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "NJPTpD3KM4GMFfHygbpz0": {
+      "id": "NJPTpD3KM4GMFfHygbpz0",
+      "description": "User Daily View Component",
+      "columnId": "column-done"
+    },
+    "1hy2ps1gyqJJmxkmttYfy": {
+      "id": "1hy2ps1gyqJJmxkmttYfy",
+      "description": "Client Weekly View Component",
+      "columnId": "column-done"
+    },
+    "2BGAzcITJgVlrFZhKqmj7": {
+      "id": "2BGAzcITJgVlrFZhKqmj7",
+      "description": "Add Admin Dashboard",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "UoBnfjnx3XUJGEGkzdNzs": {
+      "id": "UoBnfjnx3XUJGEGkzdNzs",
+      "description": "Create Database",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "mDSWxcwNmgxJ7sO9bi1gi": {
+      "id": "mDSWxcwNmgxJ7sO9bi1gi",
+      "description": "Add Light Mode/Dark Mode",
+      "columnId": "column-cZAyHyRa5_1JQYN1vHK9_"
+    },
+    "xNXo_HBtY2Cr_hiJ3pSYl": {
+      "id": "xNXo_HBtY2Cr_hiJ3pSYl",
+      "description": "Install React Big Calendar\n",
+      "columnId": "column-todo"
+    },
+    "ovQJN0nICJjDB5LO5iHde": {
+      "id": "ovQJN0nICJjDB5LO5iHde",
+      "description": "Install Chakra",
+      "columnId": "column-todo"
+    },
+    "4hZ_vyG8ro9tWtQDd4NsX": {
+      "id": "4hZ_vyG8ro9tWtQDd4NsX",
+      "description": "Tested API Routes",
+      "columnId": "column-_alDnBLOUVz3WcQ1wNSy0"
+    },
+    "jokWIn8Z-8mdf3x5GXUYN": {
+      "id": "jokWIn8Z-8mdf3x5GXUYN",
+      "description": "add logged in constraints to rest of app.py",
+      "columnId": "column-xDKG7OXZnGeXvhfo0wKOu"
+    }
+  },
+  "columns": [
+    {
+      "id": "column-todo",
+      "title": "Prep",
+      "tasksIds": [
+        "UOE3cEos0uCHBc7eaQSix",
+        "vjNpnuZsXkGLbEtH-Wvwj",
+        "rccEWwzgjUEyVdI9sR-qB",
+        "xNXo_HBtY2Cr_hiJ3pSYl",
+        "ovQJN0nICJjDB5LO5iHde"
+      ]
+    },
+    {
+      "id": "column-doing",
+      "title": "Prep - Completed",
+      "tasksIds": [
+        "task-cSr80R0Q4GEmaqdDBwWxI",
+        "wMh9aa-FZ_4YHbvrMqNoW",
+        "iBDAiUlHUTsxXQMvdxGOV",
+        "XyLp0PiYutXI6ldZtyvzV",
+        "f_QSYmrzMonYWx6uZCq0z",
+        "-M3-yaETEvTlUJX-FHxfz",
+        "qFGreIH7_7p2C8b-02YhE"
+      ]
+    },
+    {
+      "id": "column-done",
+      "title": "MVP Goals",
+      "tasksIds": [
+        "26B85gEp7P97EcsyyuE3F",
+        "0EJh_Jza96HqIxL8zlugg",
+        "rRgz0mjHFQioeSbQD2NHN",
+        "Sc2aUpDEJ9Kw97T178qBx",
+        "VRI0-vchpMjYaVw5HAYHg",
+        "Nuq_DxX3N7tI1ZyjtOzkO",
+        "NJPTpD3KM4GMFfHygbpz0",
+        "1hy2ps1gyqJJmxkmttYfy",
+        "qRXNCrJi20L84Qdp04R5w",
+        "KEaC49cO0zE1FRWVtSW8S"
+      ]
+    },
+    {
+      "id": "column-xDKG7OXZnGeXvhfo0wKOu",
+      "title": "MVP - In Progress",
+      "tasksIds": [
+        "0a0wCiiRgk6ats8Cw1PGw",
+        "fo7MPtL_mQZJJEDYTzNhO",
+        "jokWIn8Z-8mdf3x5GXUYN"
+      ]
+    },
+    {
+      "id": "column-_alDnBLOUVz3WcQ1wNSy0",
+      "title": "MVP - Completed",
+      "tasksIds": [
+        "UoBnfjnx3XUJGEGkzdNzs",
+        "4Th4xUn_ywp6OWSx85XOX",
+        "MIdwlCf_Xiv05Z8Dd43g2",
+        "sKuBi6XfObOGkpduZAwkt",
+        "vh2zIkxIp15wv65NkMmUo",
+        "NFeTJa8q5wCPkfZFCvIeS",
+        "Ud9_wTcLnlptNRDuvICsf",
+        "KYMebvkgnD6b5SW0N839_",
+        "-Aj5cXKyf89hMtvK2h9LP",
+        "PssBPiMGx4dbxt9rd95k6",
+        "nvxQPcwdYH7i8-P6-fG4Q",
+        "4hZ_vyG8ro9tWtQDd4NsX",
+        "7Gg22W-uJX91i4zDyi0O9"
+      ]
+    },
+    {
+      "id": "column-cZAyHyRa5_1JQYN1vHK9_",
+      "title": "Stretch Goals",
+      "tasksIds": [
+        "bvvtxGOQ_BFvxVmtm-ywf",
+        "4gMIbQBAUXRlx8CcKxgly",
+        "2uNoae0nK-91k2H2PNPLA",
+        "sHeY1BjzqXAOMAvyFnBWk",
+        "cT_9PApFvpMdSM5Q62RDC",
+        "AELazRfRTyLzRKRnUVDhQ",
+        "N4ze7fA6r9PbIa7w9Kjtx",
+        "Lv6EBg3A5_82xlEVrz58N",
+        "PSR0IExdPZe7oPViXJ-EG",
+        "xmf9eOgJioBMsHqqaAx8u",
+        "GKYvQEiPquVwQffhHF48y",
+        "2BGAzcITJgVlrFZhKqmj7",
+        "mDSWxcwNmgxJ7sO9bi1gi"
+      ]
+    },
+    {
+      "id": "column-W29niNqRNL7bDUwBXjHbT",
+      "title": "Stretch Goals - Completed",
+      "tasksIds": []
+    }
+  ]
+}

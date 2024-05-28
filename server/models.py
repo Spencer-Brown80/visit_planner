@@ -5,6 +5,8 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from datetime import datetime, time, timedelta
 from sqlalchemy import DateTime, func, ForeignKey
 from sqlalchemy.orm import validates, relationship
+import dateutil.rrule as rrulestr
+
 import re
 
 
@@ -238,47 +240,65 @@ class Event(db.Model, SerializerMixin):
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     user_client_id = db.Column(db.Integer, db.ForeignKey("user_clients.id"), nullable=True)
-
+    
+    parent_event_id = db.Column(db.Integer, db.ForeignKey("events.id"), nullable=True)
     
     # Relationships
     user = db.relationship("User", back_populates="events")
     user_client = db.relationship("User_Client", back_populates="events")
-    notifications = db.relationship("User_Notification", back_populates="event")
+    notifications = db.relationship("User_Notification", back_populates="event", cascade="all, delete-orphan")
     instances = db.relationship("EventInstance", back_populates="event", cascade="all, delete-orphan")
+    parent_event = db.relationship("Event", remote_side=[id], backref="child_events")
 
     # Serialization rules
-    serialize_only = ('id', 'type', 'status', 'start', 'end', 'is_fixed', 'priority', 'is_recurring', 'recurrence_rule', 'notify_client', 'notes', 'is_completed', 'is_endpoint', 'address', 'city', 'state', 'zip', 'date_created')
+    serialize_only = ('id', 'type', 'status', 'start', 'end', 'is_fixed', 'priority', 'is_recurring', 'recurrence_rule', 'notify_client', 'notes', 'is_completed', 'is_endpoint', 'address', 'city', 'state', 'zip', 'date_created', 'user_id', 'user_client_id', 'parent_event_id')
     serialize_rules = ("-user.events", "-instances", "-notifications.event")
 
     def to_dict(self):
-        event_dict = super().to_dict()
-        event_dict['start'] = self.start.isoformat() 
-        event_dict['end'] = self.end.isoformat() 
-        event_dict['date_created'] = self.date_created.isoformat() 
-        if self.user_client:
-            event_dict['client_name'] = f"{self.user_client.first_name} {self.user_client.last_name}"
-        else:
-            event_dict['client_name'] = "No Client"
+        event_dict = {
+            'id': self.id,
+            'type': self.type,
+            'status': self.status,
+            'start': self.start.isoformat(),
+            'end': self.end.isoformat(),
+            'date_created': self.date_created.isoformat(),
+            'is_fixed': self.is_fixed,
+            'priority': self.priority,
+            'is_recurring': self.is_recurring,
+            'recurrence_rule': self.recurrence_rule,
+            'notify_client': self.notify_client,
+            'notes': self.notes,
+            'is_completed': self.is_completed,
+            'is_endpoint': self.is_endpoint,
+            'address': self.address,
+            'city': self.city,
+            'state': self.state,
+            'zip': self.zip,
+            'user_client_id': self.user_client_id,
+            'parent_event_id': self.parent_event_id,  # Include parent_event_id in the dictionary
+            'client_name': f"{self.user_client.first_name} {self.user_client.last_name}" if self.user_client else "No Client",
+        }
         return event_dict
+
 
 
     # Validations
     
-    @validates('start', 'end')
+    @validates('start', 'end', 'date_created')
     def validate_start_time_format(self, key, start_time):
-        if not isinstance(start_time, time):
+        if not isinstance(start_time, datetime):
             raise ValueError("Start/End time must be a valid time object")
         return start_time
 
-    @validates('type')
-    def validate_type(self, key, value):
-        assert value in EVENT_TYPE_MAP, "Invalid event type"
-        return value
+    # @validates('type')
+    # def validate_type(self, key, value):
+    #     assert value in EVENT_TYPE_MAP, "Invalid event type"
+    #     return value
 
-    @validates('status')
-    def validate_status(self, key, value):
-        assert value in EVENT_STATUS_MAP, "Invalid event status"
-        return value
+    # @validates('status')
+    # def validate_status(self, key, value):
+    #     assert value in EVENT_STATUS_MAP, "Invalid event status"
+    #     return value
 
 # Define EventInstance class
 # Define EventInstance class
@@ -666,10 +686,10 @@ class User_Client_Contacts(db.Model, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.Integer, nullable=False)
     name = db.Column(db.String, nullable=False)
-    phone = db.Column(db.String, nullable=True)
+    phone = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=True)
-    notes = db.Column(db.Text, nullable=False)
-    is_notified = db.Column(db.Boolean, nullable=False)
+    notes = db.Column(db.Text, nullable=True)
+    is_notified = db.Column(db.Boolean, nullable=True)
 
     
     user_client_id = db.Column(db.Integer, db.ForeignKey('user_clients.id'), nullable=False)
@@ -755,12 +775,7 @@ class User_Client_Notes(db.Model, SerializerMixin):
         client_notes_dict['date_created'] = serialize_datetime(self.date_created)
         return client_notes_dict
 
-    # Validations
-    @validates('type')
-    def validate_type(self, key, value):
-        if value not in CLIENT_NOTE_TYPE_MAP:
-            raise ValueError("Invalid note type")
-        return value
+    
 
     @validates('content')
     def validate_content(self, key, value):

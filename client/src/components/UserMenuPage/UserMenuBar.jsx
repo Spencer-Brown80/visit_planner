@@ -1,18 +1,40 @@
 import { Box, Button, HStack, VStack, Text } from "@chakra-ui/react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import LogoutForm from '/src/components/UserMenuPage/Logout/LogoutForm'; // Adjust the path as necessary
 
 const UserMenuBar = () => {
+  const location = useLocation();
+
+  const navButtonStyles = {
+    default: {
+      borderRadius: "0",
+      borderBottom: "2px solid transparent",
+      _hover: {
+        bg: "lightgray",
+        borderBottom: "2px solid teal",
+      },
+    },
+    active: {
+      bg: "teal",
+      color: "white",
+      borderRadius: "0",
+      borderBottom: "2px solid darkblue",
+    },
+  };
+
+  const getButtonStyle = (path) =>
+    location.pathname.includes(path) ? navButtonStyles.active : navButtonStyles.default;
+
   return (
     <Box
       position="fixed"
-      top="20px" // Offset from the top of the page
+      top="0"
       left="0"
       width="100%"
       height="100px" // Adjust height as needed
       bg="LightBlue"
       boxShadow="lg"
-      p={4}
+      zIndex="999" // Ensure it sits in front of other components
     >
       <VStack justifyContent="space-between" height="100%">
         <Text
@@ -21,32 +43,33 @@ const UserMenuBar = () => {
           fontWeight="bold"
           letterSpacing="2px"
           textShadow="2px 4px 6px rgba(0, 0, 0, .75)"
+          mt={2}
         >
           VisitMe
         </Text>
-        <HStack justifyContent="flex-start" spacing={4}>
-          <Button as={NavLink} to="calendar" colorScheme="teal">
+        <HStack justifyContent="flex-start" spacing={4} height="50%">
+          <Button as={NavLink} to="calendar" {...getButtonStyle("/calendar")}>
             Calendar
           </Button>
-          <Button as={NavLink} to="clients" colorScheme="teal">
+          <Button as={NavLink} to="clients" {...getButtonStyle("/clients")}>
             Clients
           </Button>
-          <Button as={NavLink} to="notes" colorScheme="teal">
+          <Button as={NavLink} to="notes" {...getButtonStyle("/notes")}>
             Notes
           </Button>
-          <Button as={NavLink} to="notifications" colorScheme="teal">
+          <Button as={NavLink} to="notifications" {...getButtonStyle("/notifications")}>
             Notifications
           </Button>
-          <Button as={NavLink} to="profile" colorScheme="teal">
+          <Button as={NavLink} to="profile" {...getButtonStyle("/profile")}>
             Profile
           </Button>
-          <Button as={NavLink} to="reports" colorScheme="teal">
+          <Button as={NavLink} to="reports" {...getButtonStyle("/reports")}>
             Reports
           </Button>
-          <Button as={NavLink} to="routes" colorScheme="teal">
-            Routes
+          <Button as={NavLink} to="agenda" {...getButtonStyle("/agenda")}>
+            Agenda
           </Button>
-          <LogoutForm />
+          <LogoutForm buttonStyle={navButtonStyles}/>
         </HStack>
       </VStack>
     </Box>
@@ -54,5 +77,3 @@ const UserMenuBar = () => {
 };
 
 export default UserMenuBar;
-
-

@@ -5,11 +5,11 @@ import { Outlet } from "react-router-dom";
 import { UserContext } from "../UserContext";
 
 const UserMenuPage = () => {
-  const { userId } = useContext(UserContext);
+  const { id } = useContext(UserContext);
 
   return (
     <Box>
-      <UserMenuBar userId={userId} />
+      <UserMenuBar userId={id} />
       <Box mt="120px"> {/* Add top margin to avoid overlap with UserMenuBar */}
         <Outlet />
       </Box>

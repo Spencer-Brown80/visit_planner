@@ -10,11 +10,12 @@ import {
   Button,
   useDisclosure,
 } from '@chakra-ui/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-const LogoutForm = () => {
+const LogoutForm = ({ buttonStyle }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     // Perform logout logic here
@@ -22,9 +23,13 @@ const LogoutForm = () => {
     navigate('/');
   };
 
+  const getButtonStyle = () => {
+    return location.pathname.includes('/logout') ? buttonStyle.active : buttonStyle.default;
+  };
+
   return (
     <>
-      <Button colorScheme="teal" onClick={onOpen}>
+      <Button onClick={onOpen} {...getButtonStyle()}>
         Logout
       </Button>
 
