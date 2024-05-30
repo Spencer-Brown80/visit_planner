@@ -15,10 +15,10 @@ const UserMenuBar = () => {
       },
     },
     active: {
-      bg: "teal",
-      color: "white",
+      bg: "#23b88d", // teal
+      color: "#FFFFFF", // white
       borderRadius: "0",
-      borderBottom: "2px solid darkblue",
+      borderBottom: "2px solid #00008B", // darkblue
     },
   };
 
@@ -32,7 +32,7 @@ const UserMenuBar = () => {
       left="0"
       width="100%"
       height="100px" // Adjust height as needed
-      bg="LightBlue"
+      bg="#3e195e"
       boxShadow="lg"
       zIndex="999" // Ensure it sits in front of other components
     >
@@ -40,7 +40,7 @@ const UserMenuBar = () => {
         <Text
           fontSize="40px"
           fontFamily="'Dancing Script', cursive" // Use Dancing Script font
-          color="#27053D" // Apply selected color
+          color="#6f4a94" // Apply selected color
           fontWeight="bold"
           letterSpacing="2px"
           textShadow="2px 4px 6px rgba(0, 0, 0, .75)"

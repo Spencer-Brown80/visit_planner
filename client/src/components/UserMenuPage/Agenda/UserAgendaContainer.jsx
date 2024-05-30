@@ -85,17 +85,24 @@ const UserAgendaContainer = () => {
     });
   };
 
+  const toggleComponent = (component) => {
+    setSelectedComponent(prevComponent => (prevComponent === component ? null : component));
+  };
+
   return (
     <Box mt="120px" p={4} borderWidth="1px" borderRadius="lg" boxShadow="lg">
       <VStack spacing={4} align="stretch">
-        <Button colorScheme="teal" width="100%" onClick={() => setSelectedComponent('preferences')}>
+        <Button colorScheme="teal" width="100%" onClick={() => toggleComponent('preferences')}>
           My Preferences
         </Button>
-        <Button colorScheme="teal" width="100%" onClick={() => setSelectedComponent('options')}>
+        <Button colorScheme="teal" width="100%" onClick={() => toggleComponent('options')}>
           Today's Options
         </Button>
-        <Button colorScheme="teal" width="100%" onClick={() => setSelectedComponent('routeOptions')}>
+        <Button colorScheme="teal" width="100%" onClick={() => toggleComponent('routeOptions')}>
           Route Options
+        </Button>
+        <Button colorScheme="teal" width="100%" onClick={() => setSelectedComponent(null)}>
+          Agenda
         </Button>
       </VStack>
       <Box mt={4}>

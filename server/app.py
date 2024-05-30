@@ -266,8 +266,8 @@ class UserEvent(Resource):
             db.session.commit()
         else:
             logging.debug(f"Before conversion - Start: {data.get('start')}, End: {data.get('end')}")
-            event.start = isoparse(data.get('start', event.start.isoformat())).replace(tzinfo=timezone.utc) 
-            event.end = isoparse(data.get('end', event.end.isoformat())).replace(tzinfo=timezone.utc)
+            event.start = isoparse(data.get('start', event.start.isoformat())).replace(tzinfo=timezone.utc) - timedelta(hours=4)
+            event.end = isoparse(data.get('end', event.end.isoformat())).replace(tzinfo=timezone.utc) - timedelta(hours=4)
             logging.debug(f"After conversion - Start: {event.start}, End: {event.end}")
 
             event.type = data.get('type', event.type)

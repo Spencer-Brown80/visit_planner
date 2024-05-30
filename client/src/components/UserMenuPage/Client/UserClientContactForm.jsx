@@ -27,7 +27,7 @@ const UserClientContactForm = ({ isOpen, onClose, contact, clientId, userId, onF
     phone: Yup.string().required('Required'),
     email: Yup.string().email('Invalid email').required('Required'),
     type: Yup.string().required('Required'),
-    notes: Yup.string().required('Required')
+    notes: Yup.string()
   });
 
   const handleSubmit = async (values, actions) => {

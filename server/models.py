@@ -729,17 +729,8 @@ class User_Client_Contacts(db.Model, SerializerMixin):
                 raise ValueError("Invalid email format")
         return value
 
-    @validates('notes')
-    def validate_notes(self, key, value):
-        if not value or value.strip() == "":
-            raise ValueError("Notes cannot be empty")
-        return value
+    
 
-    @validates('is_notified')
-    def validate_is_notified(self, key, value):
-        if not isinstance(value, bool):
-            raise ValueError("Must be a boolean value")
-        return value
     
     
 #Establish User_Client_Notes Class.   Has a one to many relationship with User Clients.  

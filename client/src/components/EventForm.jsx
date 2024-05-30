@@ -83,7 +83,8 @@ const REVERSE_EVENT_STATUS_MAP = {
 // Define the adjustByHours function outside
 const adjustByHours = (dateStr, hours) => {
   const date = new Date(dateStr);
-  return new Date(date.getTime() - hours * 60 * 60 * 1000).toISOString();
+  const adjustedDate = new Date(date.getTime() - hours * 60 * 60 * 1000);
+  return adjustedDate.toISOString().split('.')[0]; // This will remove the milliseconds and the Z
 };
 
 // Function to generate recurring events
@@ -461,6 +462,10 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
       console.error('Error deleting event:', error);
     }
   };
+
+
+  
+
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>

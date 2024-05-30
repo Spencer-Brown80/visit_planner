@@ -14,6 +14,7 @@ const EVENT_TYPE_MAP = {
 
 const DailyAgenda = ({ userId, selectedDate, onDateChange, onPreviousDay, onNextDay }) => {
   const [events, setEvents] = useState([]);
+  const [clients, setClients] = useState([]); // State to hold clients
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const navigate = useNavigate();
@@ -46,7 +47,18 @@ const DailyAgenda = ({ userId, selectedDate, onDateChange, onPreviousDay, onNext
       }
     };
 
+    const fetchClients = async () => {
+      try {
+        const response = await fetch(`/api/user_clients`);
+        const clientsData = await response.json();
+        setClients(clientsData);
+      } catch (error) {
+        console.error('Error fetching clients:', error);
+      }
+    };
+
     fetchEvents();
+    fetchClients(); // Fetch clients on component mount
   }, [selectedDate, userId]);
 
   const handleOpenModal = (event) => {
@@ -133,7 +145,7 @@ const DailyAgenda = ({ userId, selectedDate, onDateChange, onPreviousDay, onNext
                 fetchEvents();
               }}
               userId={userId}
-              clients={[]} // Pass the list of clients if available
+              clients={clients} // Pass the list of clients to EventForm
               events={events}
             />
           </ModalBody>

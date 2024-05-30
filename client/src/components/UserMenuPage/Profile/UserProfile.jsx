@@ -80,7 +80,7 @@ const UserProfile = () => {
             .then((data) => {
               setUser(data);
               setSubmitting(false);
-              navigate("/usermenu/profile");
+              navigate(`/usermenu/${id}/profile`);
             })
             .catch((error) => {
               console.error("Error updating user data:", error);

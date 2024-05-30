@@ -1,7 +1,20 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
-import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Button, FormControl, FormLabel, Textarea, Select } from '@chakra-ui/react';
+import {
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  Button,
+  FormControl,
+  FormLabel,
+  Textarea,
+  Select,
+} from '@chakra-ui/react';
 
 const UserNotesForm = ({ note, userId, onClose, onSubmit }) => {
   const initialValues = {
@@ -23,7 +36,7 @@ const UserNotesForm = ({ note, userId, onClose, onSubmit }) => {
     };
 
     try {
-      const response = await fetch(`/api/users/${userId}/user_notes/${note ? note.id : ''}`, {
+      const response = await fetch(`/api/users/${userId}/user_notes${note ? `/${note.id}` : ''}`, {
         method: note ? 'PATCH' : 'POST',
         headers: {
           'Content-Type': 'application/json',
