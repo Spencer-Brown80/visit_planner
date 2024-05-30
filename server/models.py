@@ -284,11 +284,11 @@ class Event(db.Model, SerializerMixin):
 
     # Validations
     
-    @validates('start', 'end', 'date_created')
-    def validate_start_time_format(self, key, start_time):
-        if not isinstance(start_time, datetime):
-            raise ValueError("Start/End time must be a valid time object")
-        return start_time
+    # @validates('start', 'end', 'date_created')
+    # def validate_start_time_format(self, key, start_time):
+    #     if not isinstance(start_time, datetime):
+    #         raise ValueError("Start/End time must be a valid time object")
+    #     return start_time
 
     # @validates('type')
     # def validate_type(self, key, value):

@@ -29,9 +29,10 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { FaMapMarkerAlt } from "react-icons/fa";
-import ConflictModal from "/src/components/UserMenuPage/Calendar/ConflictModal"; // Import ConflictModal
-import UpdateEventModal from "/src/components/UserMenuPage/Calendar/UpdateEventModal"; // Import UpdateEventModal
-import DeleteEventModal from "/src/components/UserMenuPage/Calendar/DeleteEventModal"; // Import DeleteEventModal
+import ConflictModal from "/src/components/UserMenuPage/Calendar/ConflictModal";
+import UpdateEventModal from "/src/components/UserMenuPage/Calendar/UpdateEventModal";
+import DeleteEventModal from "/src/components/UserMenuPage/Calendar/DeleteEventModal";
+import { RRule, rrulestr } from 'rrule'; // Correctly import rrule
 
 const recurrenceOptionsTop = [
   { value: "Weekly", label: "Weekly" },
@@ -66,7 +67,7 @@ const REVERSE_EVENT_TYPE_MAP = {
 const EVENT_STATUS_MAP = {
   1: "Pending",
   2: "Confirmed",
-  3: "Conflict",
+  // 3: "Conflict",
   4: "Completed",
   5: "Canceled",
 };
@@ -74,9 +75,59 @@ const EVENT_STATUS_MAP = {
 const REVERSE_EVENT_STATUS_MAP = {
   "Pending": 1,
   "Confirmed": 2,
-  "Conflict": 3,
+  // "Conflict": 3,
   "Completed": 4,
   "Canceled": 5,
+};
+
+// Define the adjustByHours function outside
+const adjustByHours = (dateStr, hours) => {
+  const date = new Date(dateStr);
+  return new Date(date.getTime() - hours * 60 * 60 * 1000).toISOString();
+};
+
+// Function to generate recurring events
+const generateRecurringEvents = (event) => {
+  if (!event || !event.start) {
+    console.error("Invalid event data passed to generateRecurringEvents:", event);
+    return [];
+  }
+
+  const maxEndDate = new Date(event.start);
+  maxEndDate.setDate(maxEndDate.getDate() + 180); // 180 days from start date
+  const rule = rrulestr(event.recurrence_rule, { dtstart: new Date(event.start) });
+  const occurrences = rule.between(new Date(event.start), maxEndDate, true); // Generate all occurrences
+
+  const recurringEvents = occurrences.map((occurrence) => {
+    if (occurrence > new Date(event.start)) {
+      const end = new Date(occurrence);
+      end.setTime(end.getTime() + (new Date(event.end) - new Date(event.start))); // Adjust end time
+      return {
+        start: occurrence.toISOString(),
+        end: end.toISOString(),
+        type: event.type,
+        status: event.status,
+        is_fixed: event.is_fixed,
+        priority: event.priority,
+        is_recurring: false, // Each generated event is not recurring itself
+        recurrence_rule: event.recurrence_rule, // Include the recurrence rule
+        notify_client: event.notify_client,
+        notes: event.notes,
+        is_completed: event.is_completed,
+        is_endpoint: event.is_endpoint,
+        address: event.address,
+        city: event.city,
+        state: event.state,
+        zip: event.zip,
+        user_id: event.user_id,
+        user_client_id: event.user_client_id,
+        parent_event_id: event.id, // Link to the original event
+      };
+    }
+    return null;
+  }).filter(event => event !== null);
+
+  return recurringEvents;
 };
 
 const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }) => {
@@ -90,7 +141,7 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
 
   const toLocalISOString = (date) => {
     const tzOffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
-    return new Date(date - tzOffset).toISOString().slice(0, 16);
+    return new Date(date - tzOffset).toISOString().slice(0, 19);
   };
 
   const initialValues = {
@@ -141,7 +192,7 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
         rrule = `FREQ=WEEKLY;BYDAY=${values.recurrence_days.join(",")}`;
       }
       if (values.recurrence_end) {
-        rrule += `;UNTIL=${values.recurrence_end.replace(/-/g, "")}`;
+        rrule += `;UNTIL=${values.recurrence_end.replace(/-/g, "")}T235959Z`; // Ensure the end date is in UTC format
       }
     }
     return rrule;
@@ -201,11 +252,23 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
   };
 
   const handleSubmit = async (values, { setFieldValue }) => {
-    console.log("Form Values:", values);
+    const toUTCISOString = (dateStr) => {
+      const date = new Date(dateStr);
+      return date.toISOString(); // Converts to UTC ISO string
+    };
+
+    console.log("Form Values:", values); // Log form values
+
+    const adjustedStart = adjustByHours(values.start, 4);
+    const adjustedEnd = adjustByHours(values.end, 4);
+
+    console.log("Adjusted Start:", adjustedStart); // Log adjusted start time
+    console.log("Adjusted End:", adjustedEnd); // Log adjusted end time
+
     const eventData = {
       notes: values.notes,
-      start: values.start,
-      end: values.end,
+      start: adjustedStart,
+      end: adjustedEnd,
       is_completed: values.is_completed,
       priority: values.priority,
       user_id: parseInt(values.user_id, 10),
@@ -229,65 +292,28 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
 
     console.log("Event data being sent:", eventData);
 
-    const method = event ? 'PATCH' : 'POST';
-    const url = event ? `/api/users/${userId}/events/${event.id}` : `/api/users/${userId}/events`;
+    if (event) {
+      setIsUpdateEventModalOpen(true);
+    } else {
+      try {
+        const response = await fetch(`/api/users/${userId}/events`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(eventData),
+        });
 
-    try {
-      const overlappingEvents = checkForConflicts(eventData);
-      if (overlappingEvents.length > 0) {
-        setConflicts(overlappingEvents);
-        setIsConflictModalOpen(true);
-        return;
-      }
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
 
-      if (event && event.parent_event_id) {
-        setIsUpdateEventModalOpen(true);
-        return;
-      }
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(eventData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      if (onSubmit) {
+        const data = await response.json();
         onSubmit(data);
+        onClose();
+      } catch (error) {
+        console.error('Error creating event:', error);
       }
-      onClose();
-      window.location.reload();
-    } catch (error) {
-      console.error('Error submitting event:', error);
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      if (event && event.parent_event_id) {
-        setIsDeleteEventModalOpen(true);
-        return;
-      }
-      
-      const response = await fetch(`/api/users/${userId}/events/${event.id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      if (onSubmit) {
-        onSubmit(null, event.id);
-      }
-      onClose();
-      window.location.reload();
-    } catch (error) {
-      console.error('Error deleting event:', error);
     }
   };
 
@@ -302,25 +328,27 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
     setIsConflictModalOpen(false);
   };
 
-  const handleProceedWithUpdate = async () => {
+  const handleProceedWithUpdate = async (updateSeries) => {
     try {
-      const updatedEvent = { ...event, update_series: updateSeries };
-  
-      // Ensure the date is in the correct format
-      updatedEvent.start = new Date(updatedEvent.start).toISOString().slice(0, 19);
-      updatedEvent.end = new Date(updatedEvent.end).toISOString().slice(0, 19);
-  
+      const adjustedStart = adjustByHours(event.start, 4);
+      const adjustedEnd = adjustByHours(event.end, 4);
+
+      const updatedEvent = {
+        ...event,
+        start: adjustedStart,
+        end: adjustedEnd,
+        update_series: updateSeries
+      };
+
       if (updateSeries) {
-        // Fetch the series events
         const response = await fetch(`/api/users/${userId}/events`);
         if (!response.ok) {
           throw new Error('Network response was not ok when fetching events');
         }
-  
+
         const allEvents = await response.json();
-        const eventsToDelete = allEvents.filter(e => e.parent_event_id === event.parent_event_id || e.id === event.id);
-  
-        // Delete existing series
+        const eventsToDelete = allEvents.filter(e => e.parent_event_id === event.parent_event_id && e.start >= event.start);
+
         for (let eventToDelete of eventsToDelete) {
           const deleteResponse = await fetch(`/api/users/${userId}/events/${eventToDelete.id}`, {
             method: 'DELETE',
@@ -329,8 +357,7 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
             throw new Error('Network response was not ok when deleting events');
           }
         }
-  
-        // Create the updated event first
+
         const createResponse = await fetch(`/api/users/${userId}/events`, {
           method: 'POST',
           headers: {
@@ -338,19 +365,18 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
           },
           body: JSON.stringify(updatedEvent),
         });
-  
+
         if (!createResponse.ok) {
           throw new Error('Network response was not ok when creating the updated event');
         }
-  
+
         const updatedEventData = await createResponse.json();
-  
-        // Recreate the series with updated event data
+
         const recurrenceRule = createRRule(updatedEventData);
         if (recurrenceRule) {
-          const newEvents = generateRecurringEvents(updatedEventData, recurrenceRule);
+          const newEvents = generateRecurringEvents(updatedEventData);
           for (let newEvent of newEvents) {
-            newEvent.parent_event_id = updatedEventData.id; // Assign parent ID
+            newEvent.parent_event_id = updatedEventData.id;
             const createNewResponse = await fetch(`/api/users/${userId}/events`, {
               method: 'POST',
               headers: {
@@ -363,15 +389,16 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
             }
           }
         }
-  
+
         if (onSubmit) {
           onSubmit(updatedEventData);
         }
       } else {
-        // If not updating the series, just update the single event
+        updatedEvent.parent_event_id = null;
+
         const method = 'PATCH';
         const url = `/api/users/${userId}/events/${event.id}`;
-  
+
         const response = await fetch(url, {
           method,
           headers: {
@@ -379,18 +406,18 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
           },
           body: JSON.stringify(updatedEvent),
         });
-  
+
         if (!response.ok) {
           throw new Error('Network response was not ok when updating the single event');
         }
-  
+
         const updatedEventData = await response.json();
-  
+
         if (onSubmit) {
           onSubmit(updatedEventData);
         }
       }
-  
+
       onClose();
       window.location.reload();
     } catch (error) {
@@ -398,55 +425,41 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
     }
     setIsUpdateEventModalOpen(false);
   };
-  
-  // Function to generate recurring events based on recurrence rule
-  const generateRecurringEvents = (event, recurrenceRule) => {
-    const events = [];
-    const startDate = new Date(event.start);
-    const endDate = new Date(event.end);
-    let nextStartDate = new Date(startDate);
-    let nextEndDate = new Date(endDate);
-  
-    // Example logic to generate events (customize based on your recurrence rule logic)
-    for (let i = 1; i <= 5; i++) { // Generate 5 recurring events as an example
-      nextStartDate.setDate(startDate.getDate() + i * 7); // Weekly recurrence
-      nextEndDate.setDate(endDate.getDate() + i * 7);
-  
-      events.push({
-        ...event,
-        start: nextStartDate.toISOString().slice(0, 19),
-        end: nextEndDate.toISOString().slice(0, 19),
-      });
-    }
-  
-    return events;
-  };
-  
-  
-
 
   const handleProceedWithDelete = async () => {
     try {
-      const eventsToDelete = events.filter(e => e.parent_event_id === event.parent_event_id || e.id === event.id);
+      if (updateSeries && event?.parent_event_id) {
+        const response = await fetch(`/api/users/${userId}/events`);
+        if (!response.ok) {
+          throw new Error('Network response was not ok when fetching events');
+        }
 
-      for (let eventToDelete of eventsToDelete) {
-        const response = await fetch(`/api/users/${userId}/events/${eventToDelete.id}`, {
+        const allEvents = await response.json();
+        const eventsToDelete = allEvents.filter(e => e.parent_event_id === event.parent_event_id);
+
+        for (let eventToDelete of eventsToDelete) {
+          const deleteResponse = await fetch(`/api/users/${userId}/events/${eventToDelete.id}`, {
+            method: 'DELETE',
+          });
+          if (!deleteResponse.ok) {
+            throw new Error('Network response was not ok when deleting events');
+          }
+        }
+      } else if (event) {
+        const deleteResponse = await fetch(`/api/users/${userId}/events/${event.id}`, {
           method: 'DELETE',
         });
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
+        if (!deleteResponse.ok) {
+          throw new Error('Network response was not ok when deleting event');
         }
       }
-      
-      if (onSubmit) {
-        onSubmit(null, event.id);
-      }
+
       onClose();
+      setIsDeleteEventModalOpen(false);
       window.location.reload();
     } catch (error) {
       console.error('Error deleting event:', error);
     }
-    setIsDeleteEventModalOpen(false);
   };
 
   return (
@@ -700,7 +713,7 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
                   </Collapse>
                 </ModalBody>
                 <ModalFooter justifyContent="space-between">
-                  <Button colorScheme="blue" type="submit" isLoading={isSubmitting}>
+                  <Button colorScheme="blue" type="button" isLoading={isSubmitting} onClick={() => handleSubmit(values, { setFieldValue })}>
                     {event ? "Update" : "Create"}
                   </Button>
                   {event && (
@@ -729,7 +742,8 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
           isOpen={isDeleteEventModalOpen}
           onClose={() => setIsDeleteEventModalOpen(false)}
           onProceed={handleProceedWithDelete}
-          onChangeUpdateSeries={setUpdateSeries}
+          onChangeUpdateSeries={(value) => setUpdateSeries(value === "true")}
+          isSeries={event ? !!event.parent_event_id : false}
         />
       </ModalContent>
     </Modal>

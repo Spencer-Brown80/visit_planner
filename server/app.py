@@ -11,21 +11,18 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from sqlalchemy.exc import IntegrityError
 
-
-#Review below imports for pipfile
 import os
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, timezone
+from dateutil.parser import isoparse
 from dateutil.rrule import rrulestr
-
-
-
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 # Local imports
 from config import app, db, api
-from models import User, User_Client, Event, User_Notification, User_Parameters 
+from models import User, User_Client, Event, User_Notification, User_Parameters
 from models import User_Temp_Params, User_Notes, User_Reports, User_Client_Contacts, User_Client_Notes
 from models import Event, EventInstance, EventException
-
 
 # Set secret key for session management
 app.secret_key = b"Y\xf1Xz\x00\xad|eQ\x80t \xca\x1a\x10K"
@@ -35,38 +32,22 @@ app.permanent_session_lifetime = timedelta(minutes=30)
 def is_logged_in():
     return 'user_id' in session
 
-
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route("/")
 def index():
     return "<h1>Project Server</h1>"
 
-
-
-
-
-
-
-
-
-
-
 # Signup Routes
 class Signup(Resource):
-
     def post(self):
-
         request_json = request.get_json()
-
         first_name = request_json.get("first_name")
         last_name = request_json.get("last_name")
         username = request_json.get("username")
         password = request_json.get("password")
         phone = request_json.get("phone")
         email = request_json.get("email")
-
-       
 
         user = User(
             first_name=first_name,
@@ -78,90 +59,51 @@ class Signup(Resource):
         )
 
         try:
-
             db.session.add(user)
             db.session.commit()
-
             session["user_id"] = user.id  # session is a dictionary that stores user_id
-
             return user.to_dict(), 201
 
         except IntegrityError:
-
             return {"error": "422 Unprocessable Entity"}, 422
-
 
 api.add_resource(Signup, "/signup", endpoint="signup")
 
-
 # CheckSession Routes
 class CheckSession(Resource):
-
     def get(self):
-
         user_id = session["user_id"]
         if user_id:
             user = User.query.filter(User.id == user_id).first()
             return user.to_dict(), 200
-
         return {}, 401
-
 
 api.add_resource(CheckSession, "/check_session", endpoint="check_session")
 
-
 # Login Routes
 class Login(Resource):
-
     def post(self):
-
         request_json = request.get_json()
-
         username = request_json.get("username")
         password = request_json.get("password")
-
         user = User.query.filter(User.username == username).first()
-        print (username)
-        print (password)
-        if user:
-            if user.password == password:
 
-                session["user_id"] = (
-                    user.id
-                )  # session is a dictionary that stores user_id
-                return user.to_dict(), 200
-
+        if user and user.password == password:
+            session["user_id"] = user.id  # session is a dictionary that stores user_id
+            return user.to_dict(), 200
         return {"error": "401 Unauthorized"}, 401
-
 
 api.add_resource(Login, "/login", endpoint="login")
 
-
-
-
 # Logout Routes
 class Logout(Resource):
-
     def delete(self):
-
         if session.get("user_id"):
-
             session["user_id"] = None
             return {}, 204
-
         return {}, 401
 
-
 api.add_resource(Logout, "/logout", endpoint="logout")
-
-
-
-
-
-
-
-
-
 
 # Find overlapping events
 def find_overlapping_events(event, all_events):
@@ -196,8 +138,8 @@ class UserEvents(Resource):
         event = Event(
             type=data['type'],
             status=data['status'],
-            start=datetime.fromisoformat(data['start']),
-            end=datetime.fromisoformat(data['end']),
+            start=isoparse(data['start']),
+            end=isoparse(data['end']),
             is_fixed=data['is_fixed'],
             priority=data['priority'],
             is_recurring=data['is_recurring'],
@@ -219,8 +161,10 @@ class UserEvents(Resource):
         if event.is_recurring and event.recurrence_rule:
             recurring_events = generate_recurring_events(event)
             for recurring_event_data in recurring_events:
-                recurring_event = Event(**recurring_event_data)
-                db.session.add(recurring_event)
+                existing_event = Event.query.filter_by(start=recurring_event_data['start'], parent_event_id=event.id).first()
+                if not existing_event:
+                    recurring_event = Event(**recurring_event_data)
+                    db.session.add(recurring_event)
             db.session.commit()
 
         return (event.to_dict()), 201
@@ -230,9 +174,12 @@ def generate_recurring_events(event):
     rule = rrulestr(event.recurrence_rule, dtstart=event.start)
     occurrences = rule.between(event.start, max_end_date, inc=True)  # Generate all occurrences
 
+    existing_events = Event.query.filter(Event.parent_event_id == event.id).all()
+    existing_occurrences = {e.start for e in existing_events}
+
     recurring_events = []
     for occurrence in occurrences:
-        if occurrence > event.start:
+        if occurrence > event.start and occurrence not in existing_occurrences:
             recurring_event = {
                 'start': occurrence,
                 'end': occurrence + (event.end - event.start),  # Adjust end time
@@ -242,7 +189,6 @@ def generate_recurring_events(event):
                 'priority': event.priority,
                 'is_recurring': False,  # Each generated event is not recurring itself
                 'recurrence_rule': event.recurrence_rule,  # Include the recurrence rule
-
                 'notify_client': event.notify_client,
                 'notes': event.notes,
                 'is_completed': event.is_completed,
@@ -258,20 +204,24 @@ def generate_recurring_events(event):
             recurring_events.append(recurring_event)
     return recurring_events
 
-api.add_resource(UserEvents, '/users/<int:user_id>/events')
+def parse_datetime(dt_str):
+    try:
+        return isoparse(dt_str)
+    except ValueError:
+        return datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%S")
+
 
 class UserEvent(Resource):
-    def get(self, id, event_id):
-        event = Event.query.get_or_404(event_id)
-        return jsonify(event.to_dict())
-
     def patch(self, id, event_id):
         data = request.get_json()
+        logging.debug(f"PATCH request received with data: {data}")
+
         event = Event.query.get_or_404(event_id)
-        
+        logging.debug(f"Existing event: {event.to_dict()}")
+
         update_series = data.get('update_series', False)
         ignore_conflicts = data.get('ignore_conflicts', True)
-        
+
         if not ignore_conflicts:
             all_events = Event.query.filter_by(user_id=event.user_id).all()
             conflicting_events = find_overlapping_events(event, all_events)
@@ -282,30 +232,17 @@ class UserEvent(Resource):
                 }), 409
 
         if update_series:
-            events_to_update = Event.query.filter(Event.parent_event_id == event.parent_event_id, Event.start >= event.start).all()
-            for e in events_to_update:
-                e.type = data.get('type', e.type)
-                e.status = data.get('status', e.status)
-                e.start = datetime.fromisoformat(data.get('start', e.start.isoformat()))
-                e.end = datetime.fromisoformat(data.get('end', e.end.isoformat()))
-                e.is_fixed = data.get('is_fixed', e.is_fixed)
-                e.priority = data.get('priority', e.priority)
-                e.is_recurring = data.get('is_recurring', e.is_recurring)
-                e.recurrence_rule = data.get('recurrence_rule', e.recurrence_rule)
-                e.notify_client = data.get('notify_client', e.notify_client)
-                e.notes = data.get('notes', e.notes)
-                e.is_completed = data.get('is_completed', e.is_completed)
-                e.is_endpoint = data.get('is_endpoint', e.is_endpoint)
-                e.address = data.get('address', e.address)
-                e.city = data.get('city', e.city)
-                e.state = data.get('state', e.state)
-                e.zip = data.get('zip', e.zip)
-                e.user_client_id = data.get('user_client_id', e.user_client_id)
-        else:
+            future_events = Event.query.filter(Event.parent_event_id == event.parent_event_id, Event.start >= event.start).all()
+            for future_event in future_events:
+                db.session.delete(future_event)
+
+            logging.debug(f"Before conversion - Start: {data.get('start')}, End: {data.get('end')}")
+            event.start = isoparse(data.get('start', event.start.isoformat())).replace(tzinfo=timezone.utc) - timedelta(hours=4)
+            event.end = isoparse(data.get('end', event.end.isoformat())).replace(tzinfo=timezone.utc) - timedelta(hours=4)
+            logging.debug(f"After conversion - Start: {event.start}, End: {event.end}")
+
             event.type = data.get('type', event.type)
             event.status = data.get('status', event.status)
-            event.start = datetime.fromisoformat(data.get('start', event.start.isoformat()))
-            event.end = datetime.fromisoformat(data.get('end', event.end.isoformat()))
             event.is_fixed = data.get('is_fixed', event.is_fixed)
             event.priority = data.get('priority', event.priority)
             event.is_recurring = data.get('is_recurring', event.is_recurring)
@@ -319,230 +256,66 @@ class UserEvent(Resource):
             event.state = data.get('state', event.state)
             event.zip = data.get('zip', event.zip)
             event.user_client_id = data.get('user_client_id', event.user_client_id)
+
+            db.session.commit()
+
+            recurring_events = generate_recurring_events(event)
+            for recurring_event_data in recurring_events:
+                recurring_event = Event(**recurring_event_data)
+                db.session.add(recurring_event)
+            db.session.commit()
+        else:
+            logging.debug(f"Before conversion - Start: {data.get('start')}, End: {data.get('end')}")
+            event.start = isoparse(data.get('start', event.start.isoformat())).replace(tzinfo=timezone.utc) 
+            event.end = isoparse(data.get('end', event.end.isoformat())).replace(tzinfo=timezone.utc)
+            logging.debug(f"After conversion - Start: {event.start}, End: {event.end}")
+
+            event.type = data.get('type', event.type)
+            event.status = data.get('status', event.status)
+            event.is_fixed = data.get('is_fixed', event.is_fixed)
+            event.priority = data.get('priority', event.priority)
+            event.is_recurring = data.get('is_recurring', event.is_recurring)
+            event.recurrence_rule = data.get('recurrence_rule', event.recurrence_rule)
+            event.notify_client = data.get('notify_client', event.notify_client)
+            event.notes = data.get('notes', event.notes)
+            event.is_completed = data.get('is_completed', event.is_completed)
+            event.is_endpoint = data.get('is_endpoint', event.is_endpoint)
+            event.address = data.get('address', event.address)
+            event.city = data.get('city', event.city)
+            event.state = data.get('state', event.state)
+            event.zip = data.get('zip', event.zip)
+            event.user_client_id = data.get('user_client_id', event.user_client_id)
+            event.parent_event_id = None  # Remove parent ID
+
+            db.session.commit()
         
-        db.session.commit()
         return '', 200
 
     def delete(self, id, event_id):
         event = Event.query.get_or_404(event_id)
-        db.session.delete(event)
+        update_series = request.args.get('update_series', 'false').lower() == 'true'
+        
+        if update_series:
+            future_events = Event.query.filter(Event.parent_event_id == event.parent_event_id, Event.start >= event.start).all()
+            for future_event in future_events:
+                db.session.delete(future_event)
+        else:
+            db.session.delete(event)
+        
         db.session.commit()
         return '', 204
 
-def find_overlapping_events(event, all_events):
-    overlapping_events = []
-    for e in all_events:
-        if e.id != event.id and e.start < event.end and e.end > event.start:
-            overlapping_events.append(e)
-    return overlapping_events
 
+api.add_resource(UserEvents, '/users/<int:user_id>/events')
 api.add_resource(UserEvent, '/users/<int:id>/events/<int:event_id>')
 
 
-class UserClientEvents(Resource):
-    def get(self, id):
-        # if not is_logged_in() or session['user_id'] != id:
-        #     return {'error': 'Forbidden'}, 403
-
-        user_client = User.query.get_or_404(id)
-        events = [event.to_dict() for event in user_client.events]
-        return jsonify(events)
-    
-    def post(self, id):
-        # if not is_logged_in() or session['user_id'] != id:
-        #     return {'error': 'Forbidden'}, 403
-
-        user_client = User.query.get_or_404(id)
-        event_data = request.get_json()
-
-        # Ensure proper format for start_time and date
-        if 'start' in event_data:
-            event_data['start'] = datetime.fromisoformat(event_data['start'])
-        if 'end' in event_data:
-            event_data['end'] = datetime.fromisoformat(event_data['end'])
-        # Convert date_created to datetime if provided
-        if 'date_created' in event_data:
-            event_data['date_created'] = datetime.fromisoformat(event_data['date_created'])
-
-        event = Event(user_client_id=user_client.id, **event_data)
-        db.session.add(event)
-        db.session.commit()
-        return event.to_dict(), 201
-    
-    
-    
-    
-
-api.add_resource(UserClientEvents, '/user_clients/<int:id>/events')
-
-class UserClientEvent(Resource):
-    def get(self, id, event_id):
-        # show single client event
-        # if not is_logged_in() or session['user_id'] != id:
-        #     return {'error': 'Forbidden'}, 403
-
-        event = Event.query.get_or_404(event_id)
-        return event.to_dict()
-
-    def patch(self, id, event_id):
-        # update a single client event
-        # if not is_logged_in() or session['user_id'] != id:
-        #     return {'error': 'Forbidden'}, 403
-
-        event = Event.query.get_or_404(event_id)
-        event_data = request.get_json()
-
-        # Ensure proper format for start_time and date
-        if 'start' in event_data:
-            event_data['start'] = datetime.fromisoformat(event_data['start'])
-        if 'end' in event_data:
-            event_data['end'] = datetime.fromisoformat(event_data['end'])
-        # Convert date_created to datetime if provided
-        if 'date_created' in event_data:
-            event_data['date_created'] = datetime.fromisoformat(event_data['date_created'])
-
-        for key, value in event_data.items():
-            setattr(event, key, value)
-        db.session.commit()
-        return event.to_dict()
-
-    def delete(self, id, event_id):
-        # delete a single client event
-        # if not is_logged_in() or session['user_id'] != id:
-        #     return {'error': 'Forbidden'}, 403
-
-        event = Event.query.get_or_404(event_id)
-        db.session.delete(event)
-        db.session.commit()
-        return '', 204
-
-api.add_resource(UserClientEvent, '/user_clients/<int:id>/events/<int:event_id>')
-
-# Event Instances Routes
-# EventInstances: Handles operations related to all instances of a specific event.
-class EventInstances(Resource):
-    def get(self, event_id):
-        # if not is_logged_in() or session['user_id'] != id:
-        #     return {'error': 'Forbidden'}, 403
-        event = Event.query.get_or_404(event_id)
-        return jsonify([instance.to_dict() for instance in event.instances])
-
-    def post(self, event_id):
-        # if not is_logged_in() or session['user_id'] != id:
-        #     return {'error': 'Forbidden'}, 403
-        event = Event.query.get_or_404(event_id)
-        instance_data = request.get_json()
-        
-        # Ensure proper format for instance_date and start_time
-        if 'instance_date' in instance_data:
-            instance_data['instance_date'] = datetime.fromisoformat(instance_data['instance_date'])
-        if 'start_time' in instance_data:
-            instance_data['start_time'] = time.fromisoformat(instance_data['start_time'])
-
-        instance_data.pop('event_id', None)  # Ensure 'event_id' is not in instance_data
-
-
-        instance = EventInstance(event_id=event.id, **instance_data)
-        db.session.add(instance)
-        db.session.commit()
-        return instance.to_dict(), 201
-
-api.add_resource(EventInstances, '/events/<int:event_id>/instances')
-
-
-# EventInstanceResource: Handles operations on a single instance of an event.
-class EventInstanceResource(Resource):
-    def get(self, event_id, instance_id):
-
-        instance = EventInstance.query.get_or_404(instance_id)
-        return instance.to_dict()
-
-    def patch(self, event_id, instance_id):
-
-        instance = EventInstance.query.get_or_404(instance_id)
-        instance_data = request.get_json()
-        
-        # Ensure proper format for instance_date and start_time
-        if 'instance_date' in instance_data:
-            instance_data['instance_date'] = datetime.fromisoformat(instance_data['instance_date'])
-        if 'start_time' in instance_data:
-            instance_data['start_time'] = time.fromisoformat(instance_data['start_time'])
-
-        
-        for key, value in instance_data.items():
-            setattr(instance, key, value)
-        db.session.commit()
-        return instance.to_dict()
-
-    def delete(self, event_id, instance_id):        
-        instance = EventInstance.query.get_or_404(instance_id)
-        db.session.delete(instance)
-        db.session.commit()
-        return '', 204
-
-api.add_resource(EventInstanceResource, '/events/<int:event_id>/instances/<int:instance_id>')
-
-# Event Exceptions Routes
-# EventExceptions: Handles operations related to all exceptions of a specific event instance.
-
-class EventExceptions(Resource):
-    def get(self, event_id, instance_id):
-        instance = EventInstance.query.get_or_404(instance_id)
-        return jsonify([exception.to_dict() for exception in instance.exceptions])
-
-    def post(self, event_id, instance_id):
-        instance = EventInstance.query.get_or_404(instance_id)
-        event_data = request.get_json()
-        
-        # Ensure proper format for start_time and date
-        if 'new_start_time' in event_data:
-            event_data['new_start_time'] = time.fromisoformat(event_data['new_start_time'])
-        if 'exception_date' in event_data:
-            event_data['exception_date'] = datetime.fromisoformat(event_data['exception_date'])
-        
-        # Remove event_instance_id from event_data if it exists to avoid conflict
-        event_data.pop('event_instance_id', None)
-        
-        exception = EventException(event_instance_id=instance.id, **event_data)
-        db.session.add(exception)
-        db.session.commit()
-        return exception.to_dict(), 201
-
-api.add_resource(EventExceptions, '/events/<int:event_id>/instances/<int:instance_id>/exceptions')
 
 
 
 
 
-# EventExceptionResource: Handles operations on a single exception of an event instance.
 
-class EventExceptionResource(Resource):
-    def get(self, event_id, instance_id, exception_id):
-        exception = EventException.query.get_or_404(exception_id)
-        return exception.to_dict()
-
-    def patch(self, event_id, instance_id, exception_id):
-        exception = EventException.query.get_or_404(exception_id)
-        event_data = request.get_json()
-        
-        # Ensure proper format for start_time and date
-        if 'new_start_time' in event_data:
-            event_data['new_start_time'] = time.fromisoformat(event_data['new_start_time'])
-        if 'exception_date' in event_data:
-            event_data['exception_date'] = datetime.fromisoformat(event_data['exception_date'])
-        
-        for key, value in event_data.items():
-            setattr(exception, key, value)
-        db.session.commit()
-        return exception.to_dict()
-
-    def delete(self, event_id, instance_id, exception_id):
-        exception = EventException.query.get_or_404(exception_id)
-        db.session.delete(exception)
-        db.session.commit()
-        return '', 204
-
-api.add_resource(EventExceptionResource, '/events/<int:event_id>/instances/<int:instance_id>/exceptions/<int:exception_id>')
 
 
 
@@ -1012,6 +785,3 @@ class UserTempParam(Resource):
         return '', 204
 
 api.add_resource(UserTempParam, '/users/<int:id>/user_temp_params/<int:param_id>')
-
-
-

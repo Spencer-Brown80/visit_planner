@@ -39,7 +39,8 @@ const UserMenuBar = () => {
       <VStack justifyContent="space-between" height="100%">
         <Text
           fontSize="40px"
-          fontFamily="Boogaloo"
+          fontFamily="'Dancing Script', cursive" // Use Dancing Script font
+          color="#27053D" // Apply selected color
           fontWeight="bold"
           letterSpacing="2px"
           textShadow="2px 4px 6px rgba(0, 0, 0, .75)"

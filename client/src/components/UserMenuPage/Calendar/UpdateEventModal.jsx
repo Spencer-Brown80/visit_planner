@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Modal,
   ModalOverlay,
@@ -8,10 +8,6 @@ import {
   ModalBody,
   ModalCloseButton,
   Button,
-  Text,
-  Stack,
-  RadioGroup,
-  Radio
 } from "@chakra-ui/react";
 
 const UpdateEventModal = ({ isOpen, onClose, onProceed, onChangeUpdateSeries }) => {
@@ -22,18 +18,10 @@ const UpdateEventModal = ({ isOpen, onClose, onProceed, onChangeUpdateSeries }) 
         <ModalHeader>Update Event</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          <Text>Do you want to update this event or the entire series?</Text>
-          <RadioGroup onChange={onChangeUpdateSeries} mt={4}>
-            <Stack direction="row">
-              <Radio value={false}>This Event Only</Radio>
-              <Radio value={true}>Entire Series</Radio>
-            </Stack>
-          </RadioGroup>
+          <Button onClick={() => onProceed(false)}>Update Event</Button>
+          <Button onClick={() => onProceed(true)}>Update Series</Button>
+          <Button onClick={onClose}>Cancel</Button>
         </ModalBody>
-        <ModalFooter>
-          <Button colorScheme="blue" onClick={onProceed}>Proceed</Button>
-          <Button variant="ghost" ml={3} onClick={onClose}>Cancel</Button>
-        </ModalFooter>
       </ModalContent>
     </Modal>
   );

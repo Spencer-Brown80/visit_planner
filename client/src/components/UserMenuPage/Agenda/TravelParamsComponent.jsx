@@ -9,7 +9,7 @@ const TravelParamsComponent = ({ userId }) => {
   useEffect(() => {
     const fetchTravelParams = async () => {
       try {
-        const response = await fetch(`/api/users/${userId}/travel_params`);
+        const response = await fetch(`/api/users/${userId}/user_parameters`);
         const data = await response.json();
         setTravelParams(data);
       } catch (error) {
@@ -47,7 +47,7 @@ const TravelParamsComponent = ({ userId }) => {
 
   const handleSubmit = async (values, actions) => {
     const method = travelParams ? 'PATCH' : 'POST';
-    const url = travelParams ? `/api/users/${userId}/travel_params/${travelParams.id}` : `/api/users/${userId}/travel_params`;
+    const url = travelParams ? `/api/users/${userId}/user_parameters/${travelParams.id}` : `/api/users/${userId}/user_parameters`;
 
     try {
       const response = await fetch(url, {

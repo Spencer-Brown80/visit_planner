@@ -104,23 +104,9 @@ const UserCalendar = () => {
         setConflicts(overlappingEvents);
         setIsConflictModalOpen(true);
       } else {
-        // Proceed with updating events
-        await updateEvent(updatedEvent, false);
+        fetchEvents();
       }
-    } else {
-      fetchEvents();
     }
-  };
-
-  const updateEvent = async (event, ignoreConflicts) => {
-    const response = await fetch(`/api/events/${event.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...event, ignore_conflicts: ignoreConflicts }),
-    });
-    const data = await response.json();
-    setEvents(events.map(e => (e.id === data.id ? data : e)));
-    setSelectedEvent(data);
   };
 
   const handleProceedWithConflicts = async (selectedConflicts) => {
@@ -158,17 +144,33 @@ const UserCalendar = () => {
     if (view === "my") {
       return event.type !== 3; // Exclude "Client Unavailable" events
     } else if (view === "client") {
-      return event.type !== 2; // Exclude "Personal Event" events
+      return event.type !== 2 && event.user_client_id === parseInt(selectedClient); // Exclude "Personal Event" events and filter by selected client
     }
     return true;
   });
 
-  const renderEvent = event => {
-    const isOverdue = !event.event.is_completed && new Date() > new Date(event.event.end);
-    const color = isOverdue ? "red" : EVENT_STATUS_COLORS[event.event.status];
+  const findOverlappingEvents = (events) => {
+    const overlaps = [];
+    for (let i = 0; i < events.length; i++) {
+      for (let j = i + 1; j < events.length; j++) {
+        if (new Date(events[i].end) > new Date(events[j].start) && new Date(events[i].start) < new Date(events[j].end)) {
+          overlaps.push(events[i].id);
+          overlaps.push(events[j].id);
+        }
+      }
+    }
+    return overlaps;
+  };
   
+  const overlappingIds = findOverlappingEvents(events);
+  
+  const renderEvent = (event, allEvents) => {
+    const isOverdue = !event.is_completed && new Date() > new Date(event.end);
+    const isOverlap = overlappingIds.includes(event.id);
+    const color = isOverdue ? "red" : (isOverlap ? "orange" : EVENT_STATUS_COLORS[event.status]);
+
     // Extract client_name and notes from the event.title
-    const [clientNameRaw] = event.event.title.split(": ");
+    const [clientNameRaw] = event.title.split(": ");
     const [firstName, lastName] = clientNameRaw.split(" ");
     const clientName = lastName ? `${firstName} ${lastName.charAt(0)}.` : firstName;
     const eventTypeLabel = EVENT_TYPE_LABELS[event.event.type];

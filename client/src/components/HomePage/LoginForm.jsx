@@ -37,7 +37,7 @@ const LoginForm = ({ onShowRegister }) => {
         setSubmitting(false);
         setIsLogin(true);
         setUserId(user_data.id);  // Set userId in context
-        navigate(`/usermenu/${user_data.id}`);
+        navigate(`/usermenu/${user_data.id}/agenda`);
       })
       .catch((error) => {
         console.error("Error:", error);

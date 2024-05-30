@@ -9,7 +9,7 @@ const TempParamsComponent = ({ userId }) => {
   useEffect(() => {
     const fetchTempParams = async () => {
       try {
-        const response = await fetch(`/api/users/${userId}/temp_params`);
+        const response = await fetch(`/api/users/${userId}/user_temp_params`);
         const data = await response.json();
         setTempParams(data);
       } catch (error) {
@@ -47,7 +47,7 @@ const TempParamsComponent = ({ userId }) => {
 
   const handleSubmit = async (values, actions) => {
     const method = tempParams ? 'PATCH' : 'POST';
-    const url = tempParams ? `/api/users/${userId}/temp_params/${tempParams.id}` : `/api/users/${userId}/temp_params`;
+    const url = tempParams ? `/api/users/${userId}/user_temp_params/${tempParams.id}` : `/api/users/${userId}/user_temp_params`;
 
     try {
       const response = await fetch(url, {
