@@ -1,6 +1,12 @@
 # BiteReserve
 
-<!-- Headings -->
+to login: 
+
+username: joy_b
+password: password123
+
+run client on visit_planner/client:  npm run dev
+run server on visit_planner/server: flask run
 
 ## Description
 
@@ -8,79 +14,9 @@ VisitPlanner is a tool for home care nurses to flexibly plan their client visits
 
 The application will use its own database, but will also incorporate Google Maps API as well as the Google Geolocation API.  
 
-## Wireframe
+Application uses react big-calendar and chakra ui to create user interface throughout application.    
 
-### Home Page
-
-<!-- ![HomePage] -->
-
-### About Page
-
-<!-- ![AboutPage] -->
-
-### Login Page
-
-<!-- ![LoginPage] -->
-
-### Register Page
-
-<!-- ![RegisterPage] -->
-
-### Daily View / User Menu Page
-
-<!-- ![UserMenuPage](./planning/UserMenuPage.png) -->
-
-### Weekly View / User Calendar Page
-
-<!-- ![UserCalendarPage](./planning/UserCalendarPage.png) -->
-
-### Monthly View Page
-
-<!-- ![UserMonthlyViewPage](./planning/UserMonthlyViewPage.png) -->
-
-### User Profile Page
-
-<!-- ![UserProfilePage](./planning/UserProfilePage.png) -->
-
-### User Notes Page
-
-<!-- ![UserNotesPage](./planning/UserNotesPage.png) -->
-
-### Client List Page
-
-<!-- ![ClientListPage](./planning/ClientListPage.png) -->
-
-### Client Weekly View / Client Page
-
-<!-- ![ClientPage](./planning/ClientPage.png) -->
-
-### Client Monthly View Page
-
-<!-- ![ClientMonthlyViewPage](./planning/ClientMonthlyViewPage.png) -->
-
-### Client Profile Page
-
-<!-- ![ClientProfilePage](./planning/ClientProfilePage.png) -->
-
-### Client Notes Page
-
-<!-- ![ClientNotesPage](./planning/ClientNotesPage.png) -->
-
-### Client Contacts Page
-
-<!-- ![ClientContactsPage](./planning/ClientContactsPage.png) -->
-
-### Routes Page
-
-<!-- ![RoutesPage](./planning/RoutesPage.png) -->
-
-### Reports Page
-
-<!-- ![ReportsPage](./planning/ReportsPage.png) -->
-
-### Event Form
-
-<!-- ![EventForm](./planning/EventForm.png) -->
+Main focus is to provide a user friendly logistics tool.
 
 
 
@@ -130,9 +66,7 @@ The application will use its own database, but will also incorporate Google Maps
 
 22.  From the User's Reports page, the User can view reports regarding visits made and mileage.    
 
-23. From the User's Routes page, the User can view the selected dates routes.  The default is set to today.   This page will show google directions starting from the starting point through all events and then to the ending point.  Once en event is confirmed as complete, the Routes page will show only directions from the last confirmed shift onward.  The User can modify the parameters for that day and have them persist.   
 
-24. From the User's Routes page, the User can recalculate the day's route.  The User can temporarily remove and update parameters as needed to calculate the most appropriate route.  The User will be able to select from more than one route option.   If the User's selected route changes the start time's of the events, the events will be updated in the calendar.   The User can also re-calculate the day's route after the last confirmed shift of the day.   When recalculating the route during the middle of the day, the User's location can be used as the starting point. 
 
 25. From the User's Routes page, the User can 'Add an open shift' which takes in a name and address.   It will be added to the current set of today's remaining events.   It will recalculate the route with the remaining events to display options to the User.    The User can select an option to update the calendar and add the open shift as a one time event.   
 
@@ -140,10 +74,7 @@ The application will use its own database, but will also incorporate Google Maps
 
 27. The User can set user parameters.   Users can change their start/end address, availability by day of week, avoid tolls, avoid highways, shortest distance and shortest time.  
 
-28. The User can add, view, update and delete both User and Client notifications.  The User can select to be notified of overlapping schedules and travel delays.   The User can select/deselect for the Client/Client Contact to be notified of changes in the schedule within a given time frame.   
-
-
-
+28. The User can view User notifications.  The User can select to be notified of overlapping schedules.  
 
 
 
@@ -151,11 +82,11 @@ The application will use its own database, but will also incorporate Google Maps
 
 ## React Components Tree
 
-<!-- ![ReactComponentsTree](./planning/ComponentTree.png) -->
+![ReactComponentsTree](./Planning/Components.png)
 
 ## Database Schema
 
-![Database](./planning/Database.png)
+![Database](./Planning/Database.png)
 
 ## Constraints
 
@@ -180,17 +111,13 @@ The application will use its own database, but will also incorporate Google Maps
 
 ## API Routes
 
-<!-- ![API Routes](./planning/API-Route.png) -->
+![API Routes](./Planning/API-Routes.png)
 
-## Example of a Response Structure
 
-GET /events
-
-<!-- ![ResponseStructure](./planning/ResponseStructure.png) -->
 
 ## React Routes
 
-<!-- ![ReactRoutes](./planning/ReactRoutes.png) -->
+![ReactRoutes](./Planning/React-Routes.png)
 
 ## Stretch Goals
 
@@ -202,6 +129,3 @@ GET /events
 
 4. Users can confirm they completed shift using geolocation.    
 
-## Trello Board
-
-<!-- ![Trello Board](./planning/TrelloBoard.png)   -->

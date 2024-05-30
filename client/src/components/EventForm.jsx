@@ -333,7 +333,7 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
     try {
       const adjustedStart = adjustByHours(event.start, 4);
       const adjustedEnd = adjustByHours(event.end, 4);
-
+      console.log(adjustedStart)
       const updatedEvent = {
         ...event,
         start: adjustedStart,
@@ -405,9 +405,9 @@ const EventForm = ({ isOpen, onClose, event, onSubmit, clients, userId, events }
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(updatedEvent),
+          body: JSON.stringify(event),
         });
-
+        console.log(updatedEvent.start)
         if (!response.ok) {
           throw new Error('Network response was not ok when updating the single event');
         }
